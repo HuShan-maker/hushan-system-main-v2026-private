@@ -1,15 +1,14 @@
-const CACHE_NAME = 'p3-fast-v8';
+const CACHE_NAME = 'p3-fast-v10'; // 更新 index.html 后把 v10 改成 v11
 const ASSETS = [
-  'index.html',
-  'manifest.json',
-  'icon.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.png'
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
   self.skipWaiting();
 });
@@ -22,11 +21,10 @@ self.addEventListener('activate', (e) => {
       );
     })
   );
-  return self.clients.claim();
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
-  // 核心：直接返回缓存，不等待网络回复
   e.respondWith(
     caches.match(e.request).then((res) => {
       return res || fetch(e.request);
