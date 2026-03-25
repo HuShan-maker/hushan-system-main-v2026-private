@@ -18,17 +18,16 @@
         :root { --bg: #ffffff; --card: #e5e5ea; --red: #ff3b30; --orange: #ff9500; --btn-gray: #f2f2f7; }
         * { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         
-        /* 页面初始显示，但内容被遮罩层挡住 */
         body { 
             font-family: -apple-system, sans-serif; background: var(--bg); color: #000; 
             padding: calc(15px + env(safe-area-inset-top)) 20px 20px 20px; 
             margin: 0; transition: background 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
 
-        /* --- 新增：网页内全屏密码遮罩 --- */
+        /* 密码遮罩层：确保置顶且可点击 */
         #pwdOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #ffffff; z-index: 9999; display: flex; flex-direction: column;
+            background: #ffffff; z-index: 10000; display: flex; flex-direction: column;
             align-items: center; justify-content: center; padding: 20px;
         }
         #pwdOverlay h2 { font-size: 18px; margin-bottom: 20px; color: #000; }
@@ -39,9 +38,8 @@
         }
         #pwdOverlay button {
             width: 80%; max-width: 300px; padding: 15px; background: #000; color: #fff;
-            border: none; border-radius: 15px; font-weight: 700; font-size: 16px;
+            border: none; border-radius: 15px; font-weight: 700; font-size: 16px; cursor: pointer;
         }
-        /* --------------------------- */
         
         .h { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; }
         h2 { margin: 0; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.1; }
@@ -51,35 +49,27 @@
         .pianos { display: flex; gap: 5px; margin-bottom: 25px; padding: 12px 0 8px 0; overflow: visible; }
         .p-btn { flex: 1; background: var(--btn-gray); color: #8e8e93; border: none; padding: 10px 0; border-radius: 12px; font-weight: 700; font-size: 10px; transition: 0.2s; position: relative; white-space: nowrap; overflow: visible; }
         .p-btn.active { color: #fff !important; }
-        
         .p-badge { position: absolute; top: -5px; right: -5px; background: var(--red); width: 15px; height: 15px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; animation: badgePulse 1.5s infinite; border: 2px solid white; }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
         .slide-right { transform: translateX(30px); opacity: 0; }
-        
         .btn-wrap { position: relative; width: 100%; aspect-ratio: 1/1; }
         .btn-machine { width: 100%; height: 100%; border: none; border-radius: 24px; font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: background 0.3s; }
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
         @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
         @keyframes pulseOrange { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.96); opacity: 0.7; } }
-
         .bottom-area { display: flex; justify-content: center; margin-top: 20px; padding-bottom: 30px; }
         .fuori-btn { background: var(--btn-gray); border: none; border-radius: 18px; font-size: 14px; font-weight: 800; height: 65px; width: calc(50% + 6px); text-transform: uppercase; transition: 0.3s; position: relative; }
-        
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
-        
         #modal, #confirmModal, #editModal, #nameModal, #dayConfirmModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
         .modal-content h3 { font-size: 14px; white-space: nowrap; margin-bottom: 20px; }
         .modal-content input { width: 90%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 12px; font-size: 18px; text-align: center; background: #f9f9f9; outline: none; }
         .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; }
-        
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 8px 20px 0 20px; flex-shrink: 0; background: #fff; border-bottom: 1px solid #f2f2f7; z-index: 200; }
         .back-arrow { font-size: 28px; width: 45px; cursor: pointer; display: flex; align-items: center; height: 100%; }
@@ -115,7 +105,7 @@
 <body class="p1">
     <div id="pwdOverlay">
         <h2>Inserire Password</h2>
-        <input type="password" id="pwdInput" placeholder="****" autofocus>
+        <input type="password" id="pwdInput" placeholder="****">
         <button onclick="verifyPwd()">ACCEDI</button>
     </div>
 
@@ -158,18 +148,15 @@
     </div>
 
 <script>
-    // --- 修复：网页内验证逻辑 ---
     function verifyPwd() {
         const input = document.getElementById('pwdInput').value;
         if (input === "hs1234") {
             document.getElementById('pwdOverlay').style.display = 'none';
-            initApp();
         } else {
             alert("Password errata!");
             document.getElementById('pwdInput').value = "";
         }
     }
-    // 回车键支持
     document.getElementById('pwdInput').addEventListener('keypress', function (e) {
         if (e.key === 'Enter') verifyPwd();
     });
@@ -189,7 +176,6 @@
     let logs = JSON.parse(localStorage.getItem('logs_v7') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
     let undoStack = [], curPiano = 1, tempLog = null, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
-    
     let usedShortcutsInSession = {}; 
 
     function saveState() { 
@@ -198,7 +184,6 @@
         localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
         updateGlobalBadges(); 
     }
-
     function updateGlobalBadges() {
         for (let p = 1; p <= 5; p++) {
             const btn = document.getElementById(`p-btn-${p}`);
@@ -212,7 +197,6 @@
             }
         }
     }
-
     async function shareRegistro() {
         if (logs.length === 0) { alert("Nessun dato da inviare."); return; }
         const expandedDays = Array.from(document.querySelectorAll('.day-section:not(.collapsed) span')).map(el => el.innerText);
@@ -238,7 +222,6 @@
             const a = document.createElement('a'); a.href = url; a.download = `Registro_${currentUserName}.txt`; a.click(); URL.revokeObjectURL(url);
         }
     }
-
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) {
@@ -256,13 +239,11 @@
         }
         saveState(); renderGrid();
     }
-
     function getQueueNumber(id) {
         const orangeIds = Object.keys(act).filter(key => act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
         const index = orangeIds.indexOf(id);
         return index !== -1 ? index + 1 : null;
     }
-
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
         pianoData[curPiano].forEach(i => {
@@ -289,7 +270,6 @@
         f.className = 'fuori-btn ' + (fs ? (fs.status === 'red' ? 'or' : 'waiting') : '');
         if (!fs) f.style.color = themeConfig[curPiano];
     }
-
     function renderLogs() {
         const container = document.getElementById('logContainer');
         const expandedDays = new Set();
@@ -324,7 +304,6 @@
             container.appendChild(section);
         });
     }
-
     function initApp() {
         let redPiano = 0, orangePiano = 0;
         for (let p = 1; p <= 5; p++) { 
@@ -337,7 +316,6 @@
         document.getElementById('curYear').innerText = new Date().getFullYear();
         updateGlobalBadges(); renderGrid(); applyTheme();
     }
-
     function switchPiano(p, dir='left') { 
         if(p===curPiano) return; 
         const gd = document.getElementById('g'); 
@@ -383,6 +361,7 @@
             else if(d<0 && curPiano<5) switchPiano(curPiano+1,'left'); 
         } 
     });
+    initApp();
 </script>
 </body>
 </html>
