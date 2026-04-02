@@ -5,10 +5,17 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>EssilorLuxottica - B Side (Logic Fix)</title>
+    <title>EssilorLuxottica - B Side (Full)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
 
     <style>
         :root { --bg: #ffffff; --card: #e5e5ea; --red: #ff3b30; --orange: #ff9500; --btn-gray: #f2f2f7; }
@@ -20,13 +27,13 @@
             margin: 0; transition: background 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
         
-        /* 呼叫全屏弹窗 (仅在App运行中弹出，启动时不触发) */
         #callAlert { 
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
             background: var(--orange); z-index: 2147483647; flex-direction: column; 
             align-items: center; justify-content: center; color: white; text-align: center;
         }
         #callAlert h1 { font-size: 80px; margin: 10px 0; font-weight: 900; }
+        #callAlert p { font-size: 24px; font-weight: 700; text-transform: uppercase; }
         #callAlert button { 
             margin-top: 40px; padding: 25px 80px; border-radius: 25px; border: none; 
             background: white; color: var(--orange); font-size: 28px; font-weight: 900; 
@@ -46,16 +53,14 @@
             transition: 0.2s; position: relative; white-space: nowrap; overflow: visible; 
         }
         .p-btn.active { color: #fff !important; }
-        
-        /* Piano 按钮红点：不显示数字，只显示点 */
         .p-badge { 
-            position: absolute; top: -4px; right: -4px; 
-            background: var(--red); width: 12px; height: 12px; 
+            position: absolute; top: -5px; right: -5px; 
+            background: var(--red); width: 13px; height: 13px; 
             border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
             z-index: 10; animation: badgePulse 1.5s infinite; 
             border: 2px solid white;
         }
-        @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
@@ -63,8 +68,6 @@
         
         .btn-wrap { position: relative; width: 100%; aspect-ratio: 1/1; }
         .btn-machine { width: 100%; height: 100%; border: none; border-radius: 24px; font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: background 0.3s; }
-        
-        /* 机台上的排序 Badge */
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
@@ -91,7 +94,33 @@
         .v-user-tag { font-size: 12px; color: #8e8e93; font-weight: 600; width: 80px; text-align: right; }
         
         #logContainer { flex: 1; overflow-y: auto; padding: 3px 15px 15px 15px; -webkit-overflow-scrolling: touch; }
+        .day-header { background: var(--btn-gray); padding: 14px 15px; font-size: 14px; font-weight: 800; color: #000; display: flex; align-items: center; position: sticky; top: 0; z-index: 150; border-radius: 12px; margin-bottom: 15px; min-height: 48px; }
+        .day-del-btn { color: var(--red); font-weight: 900; font-size: 20px; margin-right: 12px; width: 20px; display: none; align-items: center; justify-content: center; line-height: 1; cursor: pointer; }
+        .day-section.collapsed .day-del-btn { display: flex; }
+        .day-header-left { display: flex; align-items: center; flex: 1; }
+        .day-header::after { content: '▼'; font-size: 10px; color: #8e8e93; margin-left: auto; }
+        .day-section.collapsed .day-header::after { content: '▶'; }
+        .day-section.collapsed .day-content { display: none; }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; } 
+        th, td { padding: 12px 2px; text-align: center; font-size: 14px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
+        th { color: #8e8e93; font-size: 9px; text-transform: uppercase; background: #fff; position: sticky; top: 48px; z-index: 140; letter-spacing: -0.2px; }
+        .col-time { text-align: left !important; padding-left: 8px !important; width: 85px; }
+        .time-cell { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; line-height: 1.1; font-size: 13.5px; font-weight: 800; padding: 2px 0; height: 100%; }
+        .t-a { color: var(--orange); }
+        .t-d { color: var(--red); }
+        
+        .v-footer { flex-shrink: 0; background: #fff; padding: 15px; border-top: 1px solid #f2f2f7; z-index: 250; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; }
+        .bottom-action-btn { border: none; padding: 10px 0; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; flex: 1; max-width: 140px; cursor: pointer; }
+        .export-btn { background: #000; color: #fff; }
+        .clear-btn { background: var(--btn-gray); color: var(--red); border: 1px solid #ddd; }
+        .v-edit-hint { font-size: 9px; color: #8e8e93; text-align: center; margin-bottom: 10px; font-weight: 600; }
         .copy-text { text-align: center; font-size: 11px; color: #000000; margin-top: 5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+
+        .undo-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--btn-gray); border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #ddd; }
+        .del-row { color: var(--red); font-weight: 900; font-size: 20px; text-align: center; width: 30px; cursor: pointer; }
+        .editable-causale { color: #000; display: block; min-height: 24px; padding: 8px 0; word-wrap: break-word; white-space: normal; line-height: 1.3; font-size: 12px; }
     </style>
 </head>
 <body class="p1">
@@ -135,12 +164,12 @@
                 <button class="bottom-action-btn clear-btn" onclick="openConfirm()">Svuota tutto</button>
                 <button class="bottom-action-btn export-btn" onclick="shareRegistro()">INVIO REGISTRO</button>
             </div>
+            <div class="v-edit-hint">doppio tocco per modificare la causale， x per cancellare</div>
             <div class="copy-text">© <span id="curYear"></span> Hu Shan. All rights reserved.</div>
         </div>
     </div>
 
 <script>
-    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -165,9 +194,9 @@
     let act = {}; 
     let logs = JSON.parse(localStorage.getItem('logs_v7') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
-    let curPiano = 1, tempLog = null, isInitialLoad = true;
+    let undoStack = [], curPiano = 1, tempLog = null, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0, usedShortcutsInSession = {}; 
+    let isInitialLoad = true; 
 
-    // --- 监听数据库 & 智能定位 ---
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         
@@ -175,23 +204,17 @@
         let oldestOrangePiano = 0;
         let oldestTime = Infinity;
 
-        // 查找优先级楼层
         for(let p=1; p<=5; p++) {
-            let hasOrangeInPiano = false;
             pianoData[p].forEach(id => {
                 const item = data[id];
                 if(item) {
                     if(item.status === 'red' && redPiano === 0) redPiano = p;
-                    if(item.status === 'orange') {
-                        hasOrangeInPiano = true;
-                        if(item.startA < oldestTime) {
-                            oldestTime = item.startA;
-                            oldestOrangePiano = p;
-                        }
+                    if(item.status === 'orange' && item.startA < oldestTime) {
+                        oldestTime = item.startA; oldestOrangePiano = p;
                     }
                 }
             });
-            // 实时弹窗逻辑：仅当App已运行且有新呼叫时弹出
+            // 运行时弹窗监测
             Object.keys(data).forEach(id => {
                if(data[id].status === 'orange' && (!act[id] || act[id].status !== 'orange')) {
                    if(!isInitialLoad) showCallAlert(id);
@@ -199,7 +222,6 @@
             });
         }
 
-        // 首次打开App定位：红色优先 > 最早橙色楼层 > Piano 1
         if(isInitialLoad) {
             curPiano = redPiano || oldestOrangePiano || 1;
             isInitialLoad = false;
@@ -208,46 +230,63 @@
         act = data;
         saveState();
         renderGrid();
-        updatePianoUI();
+        applyTheme();
     });
 
-    function updatePianoUI() {
+    function saveState() { 
+        localStorage.setItem('act_v7', JSON.stringify(act)); 
+        localStorage.setItem('logs_v7', JSON.stringify(logs)); 
+        localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
+        updateGlobalBadges(); 
+    }
+
+    function updateGlobalBadges() {
         for (let p = 1; p <= 5; p++) {
             const btn = document.getElementById(`p-btn-${p}`);
+            const count = pianoData[p].filter(id => act[id] && (act[id].status === 'orange' || act[id].status === 'red')).length;
             const oldBadge = btn.querySelector('.p-badge');
             if (oldBadge) oldBadge.remove();
-
-            // 检查该层是否有任何活动（红色或橙色）
-            const hasActivity = pianoData[p].some(id => act[id] && (act[id].status === 'orange' || act[id].status === 'red'));
-            if (hasActivity) {
+            if (count > 0) {
                 const badge = document.createElement('div');
                 badge.className = 'p-badge';
                 btn.appendChild(badge);
             }
-            
-            // 背景色处理
-            btn.style.backgroundColor = (p === curPiano) ? themeConfig[p] : '#f2f2f7';
-            btn.classList.toggle('active', p === curPiano);
         }
-        document.getElementById('floorColor').value = themeConfig[curPiano];
+    }
+
+    function handleMachineClick(id) {
+        const now = Date.now();
+        if (!act[id]) {
+            act[id] = { startA: now, status: 'red', startD: now };
+            db.ref('active_calls/' + id).set(act[id]);
+        } else if (act[id].status === 'orange') {
+            act[id].status = 'red'; act[id].startD = now;
+            db.ref('active_calls/' + id).update({ status: 'red', startD: now });
+        } else if (act[id].status === 'red') {
+            db.ref('active_calls/' + id).update({ status: 'completed', techName: currentUserName, endT: now });
+            let startD = act[id].startD || act[id].startA;
+            tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - act[id].startA) / 60000), tD: Math.round((now - startD) / 60000), st: act[id].startA };
+            delete act[id]; saveState(); renderGrid(); showModal(id);
+        }
     }
 
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
+        const allOrangeIds = Object.keys(act).filter(key => act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
+
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div');
             wrap.className = 'btn-wrap';
             const b = document.createElement('button');
             const s = act[i];
-            b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : s.status === 'orange' ? 'waiting' : 'completed') : 'gr');
+            b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : s.status === 'orange' ? 'waiting' : '') : 'gr');
             b.innerText = i; 
             if (!s) b.style.color = themeConfig[curPiano];
             b.onclick = () => handleMachineClick(i);
             wrap.appendChild(b);
 
             if (s && s.status === 'orange') {
-                const orangeIds = Object.keys(act).filter(key => act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
-                const qNum = orangeIds.indexOf(i) + 1;
+                const qNum = allOrangeIds.indexOf(i) + 1;
                 const badge = document.createElement('div');
                 badge.className = 'badge'; badge.innerText = qNum;
                 wrap.appendChild(badge);
@@ -255,69 +294,97 @@
             gd.appendChild(wrap);
         });
         const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
-        f.className = 'fuori-btn ' + (fs ? (fs.status === 'red' ? 'or' : fs.status === 'orange' ? 'waiting' : '') : '');
+        f.className = 'fuori-btn ' + (fs ? (fs.status === 'red' ? 'or' : 'waiting') : '');
         if (!fs) f.style.color = themeConfig[curPiano];
-    }
-
-    function handleMachineClick(id) {
-        const now = Date.now();
-        if (!act[id]) {
-            db.ref('active_calls/' + id).set({ startA: now, status: 'red', startD: now });
-        } else if (act[id].status === 'orange') {
-            db.ref('active_calls/' + id).update({ status: 'red', startD: now });
-        } else if (act[id].status === 'red') {
-            db.ref('active_calls/' + id).update({ status: 'completed', techName: currentUserName, endT: now });
-            let startD = act[id].startD || act[id].startA;
-            tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - act[id].startA) / 60000), tD: Math.round((now - startD) / 60000), st: act[id].startA };
-            showModal(id);
-        }
-    }
-
-    function saveState() { 
-        localStorage.setItem('act_v7', JSON.stringify(act)); 
-        localStorage.setItem('logs_v7', JSON.stringify(logs)); 
-        localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
     }
 
     function switchPiano(p, dir='left') { 
         if(p===curPiano) return; 
         const gd = document.getElementById('g'); 
         gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); 
-        setTimeout(() => { curPiano = p; document.body.className = 'p' + p; updatePianoUI(); gd.className = ''; }, 150); 
+        setTimeout(() => { curPiano = p; document.body.className = 'p' + p; applyTheme(); gd.className = ''; }, 150); 
     }
 
-    function showCallAlert(id) {
-        document.getElementById('alertLinea').innerText = id;
-        document.getElementById('callAlert').style.display = 'flex';
-        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{});
+    function applyTheme() { 
+        const c=themeConfig[curPiano]; 
+        document.querySelectorAll('.p-btn').forEach((b,i)=>{ 
+            b.style.backgroundColor=(i+1===curPiano)?c:'#f2f2f7'; 
+            b.classList.toggle('active',i+1===curPiano); 
+        }); 
+        document.getElementById('floorColor').value=c; 
+        renderGrid(); 
     }
-
-    function closeAlert() { document.getElementById('callAlert').style.display = 'none'; }
-    function showModal(id) { document.getElementById('modal').style.display='flex'; document.getElementById('causaleInput').value=''; setTimeout(()=>document.getElementById('causaleInput').focus(),150); }
-    function saveCausale() { tempLog.c = document.getElementById('causaleInput').value.trim()||"-"; logs.push(tempLog); if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day); saveState(); document.getElementById('modal').style.display='none'; renderGrid(); }
-    function handleShortcut(event) { const i = event.target; const v = i.value.toLowerCase(); if (v.length === 1 && shortcuts[v]) { i.value = shortcuts[v]; } }
-    function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); updatePianoUI(); }
-    function saveName() { let n=document.getElementById('nameInput').value.trim(); if(n){ currentUserName = n; localStorage.setItem('userName',n); document.getElementById('userNameDisp').innerText=n; document.getElementById('regNameDisp').innerText=n; } document.getElementById('nameModal').style.display='none'; }
-    function handleNameClick() { document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; }
-    function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
-    function closeMemoria() { document.getElementById('v').style.display='none'; }
-    function toggleFuori() { handleMachineClick('FUORI'); }
     
+    function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
+    function handleShortcut(event) { const i = event.target; const v = i.value.toLowerCase(); if (v.length === 1 && shortcuts[v] && !usedShortcutsInSession[v]) { i.value = shortcuts[v]; usedShortcutsInSession[v] = true; } }
     function renderLogs() {
-        const container = document.getElementById('logContainer'); container.innerHTML = '';
-        dayHistory.sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
-            let html = `<div class="day-header">${day}</div><table>`;
-            logs.filter(l => l.day === day).forEach(l => {
-                html += `<tr><td><b>${l.i}</b></td><td>${l.s}</td><td>A:${l.tA}m D:${l.tD}m</td><td>${l.c}</td></tr>`;
-            });
-            container.innerHTML += html + `</table>`;
+        const container = document.getElementById('logContainer');
+        const expandedDays = new Set();
+        container.querySelectorAll('.day-section:not(.collapsed) span').forEach(el => expandedDays.add(el.innerText.trim()));
+        container.innerHTML = '';
+        const oggi = new Date().toLocaleDateString('it-IT');
+        const groups = {}; 
+        dayHistory.forEach(d => groups[d] = []);
+        logs.forEach((l, idx) => { if (groups[l.day]) groups[l.day].push({ ...l, originalIndex: idx }); });
+        const sortedDays = Object.keys(groups).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join('')));
+        
+        sortedDays.forEach(day => {
+            const section = document.createElement('div');
+            const isCollapsed = expandedDays.size === 0 ? (day !== oggi) : !expandedDays.has(day);
+            section.className = 'day-section' + (isCollapsed ? ' collapsed' : '');
+            const dayLogs = groups[day].sort((a, b) => b.st - a.st);
+            section.innerHTML = `
+                <div class="day-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="day-header-left"><div class="day-del-btn" onclick="openDayDelConfirm(event, '${day}')">×</div><span>${day}</span></div>
+                </div>
+                <div class="day-content">
+                    <table>
+                        <thead><tr><th>LINEA</th><th>INIZIO</th><th class="col-time">ATTESA & DURATA</th><th>CAUSALE</th><th><span class="undo-btn" onclick="performUndo(event)">↺</span></th></tr></thead>
+                        <tbody>${dayLogs.map(l => `<tr>
+                            <td><b>${l.i === 'FUORI' ? 'F. Linea' : l.i}</b></td>
+                            <td>${l.s}</td>
+                            <td class="col-time"><div class="time-cell"><span class="t-a">A: ${l.tA}m</span><span class="t-d">D: ${l.tD}m</span></div></td>
+                            <td><span class="editable-causale" onclick="handleCausaleClick(${l.originalIndex})">${l.c}</span></td>
+                            <td class="del-row" onclick="deleteRow(${l.originalIndex})">×</td>
+                        </tr>`).join('')}</tbody>
+                    </table>
+                </div>`;
+            container.appendChild(section);
         });
     }
 
+    function showModal(id) { usedShortcutsInSession = {}; document.getElementById('modal').style.display='flex'; document.getElementById('causaleInput').value=''; setTimeout(()=>document.getElementById('causaleInput').focus(),150); }
+    function saveCausale() { tempLog.c = document.getElementById('causaleInput').value.trim()||"-"; logs.push(tempLog); if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day); saveState(); document.getElementById('modal').style.display='none'; renderGrid(); }
+    function handleCausaleClick(index) { clickCount++; if(clickCount===1) clickTimer=setTimeout(()=>clickCount=0,350); else { clearTimeout(clickTimer); clickCount=0; editIndex = index; document.getElementById('editCausaleInput').value=logs[index].c; document.getElementById('editModal').style.display='flex'; setTimeout(()=>document.getElementById('editCausaleInput').focus(),150); } }
+    function confirmEdit() { logs[editIndex].c=document.getElementById('editCausaleInput').value.trim()||"-"; saveState(); document.getElementById('editModal').style.display='none'; renderLogs(); }
+    function performUndo(e) { e.stopPropagation(); if(undoStack.length){ let last=undoStack.pop(); logs=last.l; dayHistory=last.h; saveState(); renderLogs(); } }
+    function deleteRow(index) { undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs.splice(index,1); saveState(); renderLogs(); }
+    function openDayDelConfirm(e, day) { e.stopPropagation(); document.getElementById('dayConfirmModal').style.display='flex'; document.getElementById('confirmDayDelBtn').onclick=()=>{ undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs=logs.filter(l=>l.day!==day); dayHistory=dayHistory.filter(d=>d!==day); saveState(); document.getElementById('dayConfirmModal').style.display='none'; renderLogs(); }; }
+    function handleNameClick() { nameClickCount++; if(nameClickCount === 1) { nameClickTimer = setTimeout(() => { nameClickCount = 0; }, 350); } else { clearTimeout(nameClickTimer); nameClickCount = 0; document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; setTimeout(() => document.getElementById('nameInput').focus(), 150); } }
+    function saveName() { let n=document.getElementById('nameInput').value.trim(); if(n){ currentUserName = n; localStorage.setItem('userName',n); document.getElementById('userNameDisp').innerText=n; document.getElementById('regNameDisp').innerText=n; } document.getElementById('nameModal').style.display='none'; }
+    function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
+    function closeMemoria() { document.getElementById('v').style.display='none'; }
+    function toggleFuori() { handleMachineClick('FUORI'); }
+    function doClear() { logs=[]; dayHistory=[]; saveState(); renderLogs(); document.getElementById('confirmModal').style.display='none'; }
+    function openConfirm() { document.getElementById('confirmModal').style.display='flex'; }
+
     async function shareRegistro() {
-        let text = `REGISTRO - ${currentUserName}\n`;
-        logs.forEach(l => text += `${l.day} | ${l.i} | A:${l.tA}m D:${l.tD}m | ${l.c}\n`);
-        if (navigator.share) await navigator.share({ title: `Registro`, text: text });
+        if (logs.length === 0) return;
+        const expandedDays = Array.from(document.querySelectorAll('.day-section:not(.collapsed) span')).map(el => el.innerText);
+        if (expandedDays.length === 0) return;
+        const w = { linea: 12, inizio: 10, attesa: 10, durata: 10 };
+        let shareText = `REGISTRO - ${currentUserName}\n------------------\n`;
+        const groups = {}; dayHistory.forEach(d => groups[d] = []);
+        logs.forEach(l => { if (groups[l.day]) groups[l.day].push(l); });
+        const sortedDays = Object.keys(groups).filter(day => expandedDays.includes(day)).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join('')));
+        sortedDays.forEach(day => {
+            shareText += `\n[ ${day} ]\n${"LINEA".padEnd(w.linea)}${"INIZIO".padEnd(w.inizio)}${"ATTESA".padEnd(w.attesa)}${"DURATA".padEnd(w.durata)}CAUSALE\n`;
+            groups[day].sort((a,b) => b.st - a.st).forEach(l => {
+                let displayId = l.i === 'FUORI' ? 'F. Linea' : l.i;
+                shareText += `${displayId.padEnd(w.linea)}${l.s.padEnd(w.inizio)}${(l.tA+"m").padEnd(w.attesa)}${(l.tD+"m").padEnd(w.durata)}${l.c}\n`;
+            });
+        });
+        if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
