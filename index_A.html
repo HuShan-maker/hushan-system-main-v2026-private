@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-    <title>A - Operatore Certified</title>
+    <title>A - Operatore Sync Fix</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
@@ -12,16 +12,16 @@
         
         body { 
             font-family: -apple-system, sans-serif; margin: 0; 
-            display: flex; flex-direction: column; align-items: center; justify-content: space-between; 
-            height: 100vh; background: var(--bg); 
-            padding: calc(40px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom)) 20px; 
+            display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh; background: var(--bg); 
+            padding: calc(40px + env(safe-area-inset-top)) 20px 20px 20px; 
         }
 
-        .container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
 
         h1 { font-size: 26px; font-weight: 900; margin-bottom: 50px; letter-spacing: -1px; }
         
-        .input-container { width: 100%; max-width: 280px; margin-bottom: 80px; } /* 增加间距 */
+        .input-container { width: 100%; max-width: 280px; margin-bottom: 80px; }
         input { 
             width: 100%; padding: 18px; border: 3px solid var(--btn-gray); border-radius: 20px; 
             font-size: 24px; text-align: center; font-weight: 800; outline: none; 
@@ -35,33 +35,36 @@
             cursor: pointer; text-transform: uppercase; 
         }
 
-        /* 状态样式 */
-        #mainBtn.orange { background: var(--orange); color: #fff; animation: pulseO 1.5s infinite; }
-        #mainBtn.red { background: var(--red); color: #fff; cursor: not-allowed; opacity: 0.9; }
-        #mainBtn.invalid { background: #fee; color: #ff3b30; border: 2px dashed #ff3b30; font-size: 18px; cursor: not-allowed; }
+        /* 状态控制 */
+        #mainBtn.orange { background: var(--orange) !important; color: #fff !important; animation: pulseO 1.5s infinite; }
+        #mainBtn.red { background: var(--red) !important; color: #fff !important; cursor: not-allowed; }
+        #mainBtn.invalid { background: #fee; color: #ff3b30; border: 2px dashed #ff3b30; font-size: 18px; }
         
         @keyframes pulseO { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
-        .status-text { margin-top: 30px; font-size: 16px; font-weight: 800; text-transform: uppercase; min-height: 20px; }
+        .status-text { margin-top: 30px; font-size: 16px; font-weight: 800; text-transform: uppercase; color: #8e8e93; }
 
-        /* 版权文字样式 (同步 B 端) */
-        .copy-text { text-align: center; font-size: 11px; color: #000000; margin-top: 20px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding-bottom: env(safe-area-inset-bottom); }
+        /* 版权底部 - 强制固定 */
+        .footer { width: 100%; padding: 20px 0; margin-top: auto; }
+        .copy-text { text-align: center; font-size: 11px; color: #000000; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div class="main-content">
         <h1>ESSILORLUXOTTICA</h1>
         
         <div class="input-container">
-            <input type="text" id="lineaInput" placeholder="LINEA" oninput="validateAndUpdate()">
+            <input type="text" id="lineaInput" placeholder="LINEA" oninput="handleTyping()">
         </div>
 
         <button id="mainBtn" onclick="sendCall()">INVIO</button>
         <div class="status-text" id="status">Pronto</div>
     </div>
 
-    <div class="copy-text">© <span id="curYear"></span> Hu Shan. All rights reserved.</div>
+    <div class="footer">
+        <div class="copy-text">© <span id="curYear"></span> Hu Shan. All rights reserved.</div>
+    </div>
 
 <script>
     const firebaseConfig = {
@@ -79,7 +82,7 @@
     const statusEl = document.getElementById('status');
     document.getElementById('curYear').innerText = new Date().getFullYear();
 
-    // 生成合法名单：101-108, 101bis-108bis... 501-508bis
+    // 生成合法列表
     const validLines = [];
     for(let p=1; p<=5; p++) {
         for(let n=1; n<=8; n++) {
@@ -88,71 +91,57 @@
         }
     }
 
-    let currentLinea = localStorage.getItem('myLineaName') || "";
-    let firebaseListener = null;
+    let currentListener = null;
 
     window.onload = () => {
-        if (currentLinea) {
-            inputEl.value = currentLinea;
-            validateAndUpdate();
+        const saved = localStorage.getItem('myLineaName');
+        if (saved) {
+            inputEl.value = saved;
+            checkAndListen(saved);
         }
     };
 
-    function validateAndUpdate() {
+    function handleTyping() {
         const val = inputEl.value.trim().toUpperCase();
-        
-        // 校验是否在合法名单内
         if (val === "") {
             btnEl.innerText = "INVIO";
             btnEl.className = "";
-            btnEl.disabled = true;
             statusEl.innerText = "Inserire Linea";
             return;
         }
+        checkAndListen(val);
+    }
 
+    function checkAndListen(val) {
         if (!validLines.includes(val)) {
             btnEl.innerText = "LINEA ERRATA";
             btnEl.className = "invalid";
-            btnEl.disabled = true;
-            statusEl.innerText = "Formato non valido";
-            statusEl.style.color = "red";
+            statusEl.innerText = "Non Valido";
             return;
         }
 
         // 合法输入
         btnEl.innerText = val;
-        btnEl.disabled = false;
         btnEl.className = "";
         statusEl.innerText = "Pronto";
-        statusEl.style.color = "#8e8e93";
         localStorage.setItem('myLineaName', val);
-        
-        // 开启监听
-        startListening(val);
-    }
 
-    function startListening(lineaID) {
-        if (firebaseListener) firebaseListener.off(); // 移除旧监听
-
-        firebaseListener = db.ref('active_calls/' + lineaID);
-        firebaseListener.on('value', (snapshot) => {
+        // 开启监听，但只有数据库有值时才变色
+        if (currentListener) currentListener.off();
+        currentListener = db.ref('active_calls/' + val);
+        currentListener.on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) {
                 btnEl.className = "";
                 btnEl.disabled = false;
-                btnEl.innerText = lineaID;
+                btnEl.innerText = val;
                 statusEl.innerText = "Pronto";
                 inputEl.disabled = false;
-            } else if (data.status === 'orange') {
-                btnEl.className = "orange";
+            } else {
+                btnEl.className = data.status; // orange 或 red
                 btnEl.disabled = true;
-                statusEl.innerText = "In Attesa...";
-                inputEl.disabled = true;
-            } else if (data.status === 'red') {
-                btnEl.className = "red";
-                btnEl.disabled = true;
-                btnEl.innerText = "WORK";
-                statusEl.innerText = "In Riparazione";
+                btnEl.innerText = (data.status === 'red') ? "WORK" : val;
+                statusEl.innerText = (data.status === 'red') ? "In Riparazione" : "In Attesa...";
                 inputEl.disabled = true;
             }
         });
@@ -162,6 +151,7 @@
         const val = inputEl.value.trim().toUpperCase();
         if(!validLines.includes(val)) return;
         
+        // 只有在这里点击，才会向数据库写入
         db.ref('active_calls/' + val).set({
             status: 'orange',
             startA: Date.now()
