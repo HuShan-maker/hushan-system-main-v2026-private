@@ -3,26 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-    <title>A - Operatore</title>
+    <title>A - Operatore Sync</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        :root { --bg: #ffffff; --orange: #ff9500; --btn-gray: #f2f2f7; }
+        :root { --bg: #ffffff; --orange: #ff9500; --red: #ff3b30; --btn-gray: #f2f2f7; }
         body { font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg); padding: 20px; }
         h1 { font-size: 26px; font-weight: 900; margin-bottom: 40px; letter-spacing: -1px; }
-        input { width: 100%; max-width: 280px; padding: 18px; border: 3px solid var(--btn-gray); border-radius: 20px; font-size: 24px; text-align: center; font-weight: 800; outline: none; margin-bottom: 30px; background: #f9f9f9; }
-        input:focus { border-color: #000; background: #fff; }
-        #mainBtn { width: 220px; height: 220px; border-radius: 50%; border: none; background: var(--btn-gray); font-size: 32px; font-weight: 900; color: #8e8e93; transition: 0.4s; box-shadow: 0 10px 25px rgba(0,0,0,0.1); cursor: pointer; text-transform: uppercase; }
-        #mainBtn.waiting { background: var(--orange); color: #fff; transform: scale(1.1); animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,149,0,0.7); } 70% { box-shadow: 0 0 0 20px rgba(255,149,0,0); } 100% { box-shadow: 0 0 0 0 rgba(255,149,0,0); } }
-        .status-text { margin-top: 20px; font-size: 14px; color: #8e8e93; font-weight: 700; text-transform: uppercase; }
+        
+        .input-container { width: 100%; max-width: 280px; margin-bottom: 40px; }
+        input { width: 100%; padding: 18px; border: 3px solid var(--btn-gray); border-radius: 20px; font-size: 24px; text-align: center; font-weight: 800; outline: none; background: #f9f9f9; transition: 0.3s; }
+        
+        /* 核心按钮 */
+        #mainBtn { 
+            width: 220px; height: 220px; border-radius: 50%; border: none; 
+            background: var(--btn-gray); font-size: 32px; font-weight: 900; 
+            color: #8e8e93; transition: 0.4s; box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            cursor: pointer; text-transform: uppercase; 
+        }
+
+        /* 橙色：等待中 */
+        #mainBtn.orange { background: var(--orange); color: #fff; animation: pulseO 1.5s infinite; }
+        /* 红色：维修中（失效） */
+        #mainBtn.red { background: var(--red); color: #fff; cursor: not-allowed; transform: scale(0.95); opacity: 0.9; }
+        
+        @keyframes pulseO { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+        .status-text { margin-top: 30px; font-size: 16px; font-weight: 800; text-transform: uppercase; }
+        .disabled-hint { font-size: 12px; color: #8e8e93; margin-top: 5px; display: none; }
     </style>
 </head>
 <body>
     <h1>ESSILORLUXOTTICA</h1>
-    <input type="text" id="lineaInput" placeholder="LINEA" oninput="updateLinea()">
+    <div class="input-container">
+        <input type="text" id="lineaInput" placeholder="LINEA" oninput="updateLinea()">
+    </div>
     <button id="mainBtn" onclick="sendCall()">INVIO</button>
-    <div class="status-text" id="status">Premi per chiamare</div>
+    <div class="status-text" id="status">Pronto</div>
+    <div id="hint" class="disabled-hint">Tecnico al lavoro... Attendere</div>
 
 <script>
     const firebaseConfig = {
@@ -37,45 +55,72 @@
 
     const inputEl = document.getElementById('lineaInput');
     const btnEl = document.getElementById('mainBtn');
+    const statusEl = document.getElementById('status');
+    const hintEl = document.getElementById('hint');
 
-    // 页面加载时恢复上次输入的 Linea
+    let currentLinea = localStorage.getItem('myLineaName') || "";
+
     window.onload = () => {
-        const saved = localStorage.getItem('myLineaName');
-        if (saved) {
-            inputEl.value = saved;
-            btnEl.innerText = saved;
-            btnEl.style.color = "#000";
+        if (currentLinea) {
+            inputEl.value = currentLinea;
+            btnEl.innerText = currentLinea;
+            startListening(currentLinea);
         }
     };
 
     function updateLinea() {
         const val = inputEl.value.trim().toUpperCase();
         if(val) {
+            currentLinea = val;
             btnEl.innerText = val;
             btnEl.style.color = "#000";
             localStorage.setItem('myLineaName', val);
-        } else {
-            btnEl.innerText = "INVIO";
-            btnEl.style.color = "#8e8e93";
+            startListening(val); // 切换监听的机台
         }
-        btnEl.classList.remove('waiting');
-        document.getElementById('status').innerText = "Premi per chiamare";
+    }
+
+    // --- 核心监听逻辑 ---
+    function startListening(lineaID) {
+        // 监听特定机台的状态
+        db.ref('active_calls/' + lineaID).on('value', (snapshot) => {
+            const data = snapshot.val();
+            
+            if (!data) {
+                // 数据库没记录：白色，可点击
+                btnEl.className = "";
+                btnEl.disabled = false;
+                btnEl.innerText = lineaID || "INVIO";
+                statusEl.innerText = "Pronto";
+                statusEl.style.color = "#8e8e93";
+                hintEl.style.display = "none";
+                inputEl.disabled = false;
+            } else if (data.status === 'orange') {
+                // 等待中：橙色
+                btnEl.className = "orange";
+                btnEl.disabled = true; // 发送后进入等待，不可重复点
+                statusEl.innerText = "In Attesa...";
+                statusEl.style.color = "#ff9500";
+                hintEl.style.display = "none";
+                inputEl.disabled = true;
+            } else if (data.status === 'red') {
+                // 维修中：红色，失效
+                btnEl.className = "red";
+                btnEl.disabled = true;
+                btnEl.innerText = "WORK";
+                statusEl.innerText = "In Riparazione";
+                statusEl.style.color = "#ff3b30";
+                hintEl.style.display = "block";
+                inputEl.disabled = true;
+            }
+        });
     }
 
     function sendCall() {
-        const lineaID = inputEl.value.trim().toUpperCase();
-        if(!lineaID) return alert("Inserire Linea!");
+        if(!currentLinea) return alert("Inserire Linea!");
         
-        btnEl.classList.add('waiting');
-        document.getElementById('status').innerText = "Notifica inviata...";
-
-        // 发送到云端数据库 (active_calls 路径)
-        db.ref('active_calls/' + lineaID).set({
+        db.ref('active_calls/' + currentLinea).set({
             status: 'orange',
             startA: Date.now()
-        }).then(() => {
-            document.getElementById('status').innerText = "Chiamata attiva su B e C";
-            // 这里已经去掉了跳转 WhatsApp 的代码，实现静默呼叫
         });
     }
 </script>
