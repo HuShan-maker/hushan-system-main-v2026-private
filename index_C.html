@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>C - Monitor</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f2f2f7; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 8px solid #ccc; }
+        .orange { border-left-color: #ff9500; }
+        .red { border-left-color: #ff3b30; }
+        .timer { font-size: 24px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1 style="font-weight:900">MONITOR LINEE</h1>
+    <div id="list"></div>
+<script>
+    firebase.initializeApp({ /* 填入上面的 config */ });
+    const db = firebase.database();
+    db.ref('active_calls').on('value', (s) => {
+        const data = s.val() || {};
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        Object.keys(data).forEach(id => {
+            const item = data[id];
+            const elapsed = Math.round((Date.now() - (item.startD || item.startA)) / 60000);
+            list.innerHTML += `<div class="card ${item.status}">
+                <div><b>LINEA ${id}</b><br>${item.status === 'orange' ? 'WAITING' : 'REPAIRING'}</div>
+                <div class="timer">${elapsed} min</div>
+            </div>`;
+        });
+    });
+</script>
+</body>
+</html>
