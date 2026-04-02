@@ -54,12 +54,16 @@
             transition: 0.2s; position: relative; white-space: nowrap; overflow: visible; 
         }
         .p-btn.active { color: #fff !important; }
+        
+        /* 排序红点样式 */
         .p-badge { 
-            position: absolute; top: -5px; right: -5px; 
-            background: var(--red); width: 15px; height: 15px; 
-            border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+            position: absolute; top: -8px; right: -5px; 
+            background: var(--red); color: white;
+            min-width: 18px; height: 18px; padding: 0 4px;
+            border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
             z-index: 10; animation: badgePulse 1.5s infinite; 
-            border: 2px solid white;
+            border: 2px solid white; font-size: 10px; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
         }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
@@ -171,7 +175,7 @@
     </div>
 
 <script>
-    // --- FIREBASE CONFIG (使用你的配置) ---
+    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -204,18 +208,14 @@
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         
-        // 发现新橙色呼叫则弹窗提醒
         Object.keys(data).forEach(id => {
             if (data[id].status === 'orange' && (!act[id] || act[id].status !== 'orange')) {
                 showCallAlert(id);
             }
-            act[id] = data[id];
         });
 
-        // 云端删除了，本地也要删除（如果本地是橙色）
-        Object.keys(act).forEach(id => {
-            if (!data[id] && act[id].status === 'orange') delete act[id];
-        });
+        // 完全同步云端状态
+        act = data;
 
         saveState();
         renderGrid();
@@ -225,7 +225,7 @@
         document.getElementById('alertLinea').innerText = id;
         document.getElementById('callAlert').style.display = 'flex';
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        audio.play().catch(e => console.log("Abilitare audio manually."));
+        audio.play().catch(e => console.log("Audio play blocked"));
     }
 
     function closeAlert() {
@@ -240,15 +240,21 @@
         updateGlobalBadges(); 
     }
 
+    // --- 修改：全局橙色计数逻辑 ---
     function updateGlobalBadges() {
+        // 计算全楼层所有处于 orange 状态的 A 设备总数
+        const totalOrange = Object.values(act).filter(item => item.status === 'orange').length;
+
         for (let p = 1; p <= 5; p++) {
             const btn = document.getElementById(`p-btn-${p}`);
-            const count = pianoData[p].filter(id => act[id] && (act[id].status === 'orange' || act[id].status === 'red')).length;
             const oldBadge = btn.querySelector('.p-badge');
             if (oldBadge) oldBadge.remove();
-            if (count > 0) {
+
+            // 仅在当前楼层的按钮上显示全局总计数
+            if (p === curPiano && totalOrange > 0) {
                 const badge = document.createElement('div');
                 badge.className = 'p-badge';
+                badge.innerText = totalOrange; // 显示总排队数
                 btn.appendChild(badge);
             }
         }
@@ -257,22 +263,24 @@
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) {
-            let anyRed = Object.keys(act).some(k => act[k].status === 'red');
-            act[id] = { startA: now, status: anyRed ? 'orange' : 'red', startD: anyRed ? null : now };
+            // 直接开始维修
+            act[id] = { startA: now, status: 'red', startD: now };
             db.ref('active_calls/' + id).set(act[id]);
         } else if (act[id].status === 'orange') {
+            // 响应呼叫 -> 变红
             act[id].status = 'red'; act[id].startD = now;
             db.ref('active_calls/' + id).update({ status: 'red', startD: now });
-        } else {
-            db.ref('active_calls/' + id).remove();
+        } else if (act[id].status === 'red') {
+            // 完成维修
+            db.ref('active_calls/' + id).update({ 
+                status: 'completed', 
+                techName: currentUserName, 
+                endT: now 
+            });
             let startD = act[id].startD || act[id].startA;
-            let finalAttesa = Math.max(0, startD - act[id].startA);
-            let finalDurata = Math.max(0, now - startD);
-            tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round(finalAttesa / 60000), tD: Math.round(finalDurata / 60000), st: act[id].startA };
+            tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - act[id].startA) / 60000), tD: Math.round((now - startD) / 60000), st: act[id].startA };
             delete act[id]; saveState(); renderGrid(); showModal(id);
-            return;
         }
-        saveState(); renderGrid();
     }
 
     function renderGrid() {
@@ -282,11 +290,13 @@
             wrap.className = 'btn-wrap';
             const b = document.createElement('button');
             const s = act[i];
-            b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : 'waiting') : 'gr');
+            b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : s.status === 'orange' ? 'waiting' : 'completed') : 'gr');
             b.innerText = i; 
             if (!s) b.style.color = themeConfig[curPiano];
             b.onclick = () => handleMachineClick(i);
             wrap.appendChild(b);
+
+            // 机台左上角的排序编号（仅限 orange 状态）
             if (s && s.status === 'orange') {
                 const orangeIds = Object.keys(act).filter(key => act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
                 const qNum = orangeIds.indexOf(i) + 1;
@@ -297,11 +307,11 @@
             gd.appendChild(wrap);
         });
         const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
-        f.className = 'fuori-btn ' + (fs ? (fs.status === 'red' ? 'or' : 'waiting') : '');
+        f.className = 'fuori-btn ' + (fs ? (fs.status === 'red' ? 'or' : fs.status === 'orange' ? 'waiting' : '') : '');
         if (!fs) f.style.color = themeConfig[curPiano];
     }
 
-    // --- 界面管理 ---
+    // --- 界面与初始化 ---
     function initApp() {
         let redPiano = 0, orangePiano = 0;
         for (let p = 1; p <= 5; p++) { 
@@ -319,7 +329,12 @@
         if(p===curPiano) return; 
         const gd = document.getElementById('g'); 
         gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); 
-        setTimeout(() => { curPiano = p; document.body.className = 'p' + p; renderGrid(); applyTheme(); gd.className = ''; }, 150); 
+        setTimeout(() => { 
+            curPiano = p; 
+            document.body.className = 'p' + p; 
+            applyTheme(); 
+            gd.className = ''; 
+        }, 150); 
     }
 
     function applyTheme() { 
@@ -330,6 +345,7 @@
         }); 
         document.getElementById('floorColor').value=c; 
         renderGrid(); 
+        updateGlobalBadges();
     }
     
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
@@ -342,7 +358,7 @@
         } 
     }
 
-    // --- 历史记录渲染 ---
+    // --- 历史记录 ---
     function renderLogs() {
         const container = document.getElementById('logContainer');
         const expandedDays = new Set();
@@ -379,7 +395,6 @@
         });
     }
 
-    // --- 各种弹窗功能 ---
     function showModal(id) { usedShortcutsInSession = {}; document.getElementById('modal').style.display='flex'; document.getElementById('causaleInput').value=''; setTimeout(()=>document.getElementById('causaleInput').focus(),150); }
     function saveCausale() { tempLog.c = document.getElementById('causaleInput').value.trim()||"-"; logs.push(tempLog); if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day); saveState(); document.getElementById('modal').style.display='none'; renderGrid(); }
     function handleCausaleClick(index) { clickCount++; if(clickCount===1) clickTimer=setTimeout(()=>clickCount=0,350); else { clearTimeout(clickTimer); clickCount=0; editIndex = index; document.getElementById('editCausaleInput').value=logs[index].c; document.getElementById('editModal').style.display='flex'; setTimeout(()=>document.getElementById('editCausaleInput').focus(),150); } }
@@ -396,9 +411,9 @@
     function openConfirm() { document.getElementById('confirmModal').style.display='flex'; }
 
     async function shareRegistro() {
-        if (logs.length === 0) { alert("Nessun dato da inviare."); return; }
+        if (logs.length === 0) return;
         const expandedDays = Array.from(document.querySelectorAll('.day-section:not(.collapsed) span')).map(el => el.innerText);
-        if (expandedDays.length === 0) { alert("Espandere almeno un giorno."); return; }
+        if (expandedDays.length === 0) return;
         const w = { linea: 12, inizio: 10, attesa: 10, durata: 10 };
         let shareText = `REGISTRO - ${currentUserName}\n------------------\n`;
         const groups = {}; dayHistory.forEach(d => groups[d] = []);
@@ -408,10 +423,10 @@
             shareText += `\n[ ${day} ]\n${"LINEA".padEnd(w.linea)}${"INIZIO".padEnd(w.inizio)}${"ATTESA".padEnd(w.attesa)}${"DURATA".padEnd(w.durata)}CAUSALE\n`;
             groups[day].sort((a,b) => b.st - a.st).forEach(l => {
                 let displayId = l.i === 'FUORI' ? 'F. Linea' : l.i;
-                shareText += `${displayId.toString().padEnd(w.linea)}${l.s.toString().padEnd(w.inizio)}${(l.tA+"m").padEnd(w.attesa)}${(l.tD+"m").padEnd(w.durata)}${l.c}\n`;
+                shareText += `${displayId.padEnd(w.linea)}${l.s.padEnd(w.inizio)}${(l.tA+"m").padEnd(w.attesa)}${(l.tD+"m").padEnd(w.durata)}${l.c}\n`;
             });
         });
-        if (navigator.share) { try { await navigator.share({ title: `Registro`, text: shareText }); } catch (err) {} }
+        if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
