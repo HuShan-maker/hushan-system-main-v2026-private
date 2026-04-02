@@ -3,28 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>C - Monitor Dashboard Pro</title>
+    <title>C - Monitor Dashboard (Sola Lettura)</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         :root { --orange: #ff9500; --red: #ff3b30; --gray: #8e8e93; }
         body { font-family: -apple-system, sans-serif; padding: 25px; background: #f2f2f7; color: #000; margin: 0; }
-        h1 { font-weight: 900; font-size: 28px; letter-spacing: -1px; margin-bottom: 25px; text-transform: uppercase; }
         
+        .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        h1 { font-weight: 900; font-size: 28px; letter-spacing: -1px; margin: 0; text-transform: uppercase; }
+        
+        /* 这个按钮现在改为“重置视图”，即重新显示所有被隐藏的卡片 */
+        .reset-view-btn { 
+            background: #000; color: #fff; border: none; padding: 10px 15px; 
+            border-radius: 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; cursor: pointer;
+        }
+
         #monitorList { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
         
         .card { 
             background: white; border-radius: 22px; padding: 20px; 
-            display: flex; flex-direction: column; gap: 15px;
+            display: flex; flex-direction: column; gap: 15px; position: relative;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 12px solid #ccc;
-            transition: 0.3s;
         }
-        .card.orange { border-left-color: var(--orange); animation: softPulse 2s infinite; }
+        .card.orange { border-left-color: var(--orange); }
         .card.red { border-left-color: var(--red); }
         
-        @keyframes softPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+        /* 这里的 X 只在本地隐藏卡片 */
+        .hide-card { 
+            position: absolute; top: 15px; right: 15px; width: 30px; height: 30px; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: 900; color: #eee; cursor: pointer;
+        }
+        .hide-card:hover { color: #8e8e93; }
 
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-header { display: flex; flex-direction: column; }
         .linea-id { font-size: 32px; font-weight: 900; letter-spacing: -1px; }
         .start-time { font-size: 12px; color: var(--gray); font-weight: 700; margin-top: 4px; }
 
@@ -35,14 +48,18 @@
         
         .val-a { color: var(--orange); }
         .val-d { color: var(--red); }
-        .val-t { color: #000; border-top: 1px solid #ddd; padding-top: 2px; margin-top: 2px; }
+        .val-t { color: #000; border-top: 1px solid #ddd; padding-top: 2px; }
 
         .no-data { text-align: center; margin-top: 100px; color: var(--gray); font-weight: 700; font-size: 18px; }
     </style>
 </head>
 <body>
 
-    <h1>Monitor Linee</h1>
+    <div class="header-area">
+        <h1>Monitor Dashboard</h1>
+        <button class="reset-view-btn" onclick="resetHidden()">Ripristina Vista</button>
+    </div>
+
     <div id="monitorList">Caricamento...</div>
 
 <script>
@@ -56,73 +73,44 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // 本地隐藏名单
+    let hiddenList = JSON.parse(sessionStorage.getItem('hiddenCards') || '[]');
+
     function updateDashboard() {
         db.ref('active_calls').once('value', (snapshot) => {
             const data = snapshot.val() || {};
             const container = document.getElementById('monitorList');
             container.innerHTML = '';
-
+            
             const ids = Object.keys(data);
-            if(ids.length === 0) {
-                container.innerHTML = `<div class="no-data">✅ TUTTE LE LINEE OPERATIVE</div>`;
+            // 过滤掉被隐藏的 ID
+            const visibleIds = ids.filter(id => !hiddenList.includes(id));
+
+            if(visibleIds.length === 0) {
+                container.innerHTML = `<div class="no-data">✅ NESSUNA CHIAMATA ATTIVA</div>`;
                 return;
             }
 
-            ids.forEach(id => {
+            visibleIds.forEach(id => {
                 const item = data[id];
                 const now = Date.now();
-                
-                // 计算逻辑
-                // 1. 等待时间 (Attesa)
-                // 如果是橙色，等待时间 = 现在 - 开始呼叫时间
-                // 如果是红色，等待时间 = 开始维修时间 - 开始呼叫时间
-                let tA = 0;
-                if (item.status === 'orange') {
-                    tA = Math.round((now - item.startA) / 60000);
-                } else {
-                    tA = Math.round(((item.startD || now) - item.startA) / 60000);
-                }
-
-                // 2. 维修时间 (Durata)
-                // 如果是橙色，维修还没开始，Durata = 0
-                // 如果是红色，维修时间 = 现在 - 开始维修时间
-                let tD = 0;
-                if (item.status === 'red') {
-                    tD = Math.round((now - item.startD) / 60000);
-                }
-
-                // 3. 总计时间 (Totale)
+                let tA = (item.status === 'orange') ? Math.round((now - item.startA) / 60000) : Math.round(((item.startD || now) - item.startA) / 60000);
+                let tD = (item.status === 'red') ? Math.round((now - item.startD) / 60000) : 0;
                 let tT = Math.round((now - item.startA) / 60000);
-
-                // 格式化开始时刻
                 const startTimeStr = new Date(item.startA).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
                 const card = document.createElement('div');
                 card.className = `card ${item.status}`;
                 card.innerHTML = `
+                    <div class="hide-card" onclick="hideCard('${id}')">×</div>
                     <div class="card-header">
-                        <div>
-                            <div class="linea-id">${id}</div>
-                            <div class="start-time">INIZIO: ${startTimeStr}</div>
-                        </div>
-                        <div style="font-weight:900; color:${item.status==='orange'?'var(--orange)':'var(--red)'}">
-                            ${item.status==='orange'?'WAITING':'WORK'}
-                        </div>
+                        <div class="linea-id">${id}</div>
+                        <div class="start-time">INIZIO: ${startTimeStr}</div>
                     </div>
-                    
                     <div class="time-grid">
-                        <div class="time-box">
-                            <div class="time-label">Attesa</div>
-                            <div class="time-val val-a">${tA}m</div>
-                        </div>
-                        <div class="time-box">
-                            <div class="time-label">Durata</div>
-                            <div class="time-val val-d">${tD}m</div>
-                        </div>
-                        <div class="time-box">
-                            <div class="time-label">Totale</div>
-                            <div class="time-val val-t">${tT}m</div>
-                        </div>
+                        <div class="time-box"><div class="time-label">Attesa</div><div class="time-val val-a">${tA}m</div></div>
+                        <div class="time-box"><div class="time-label">Durata</div><div class="time-val val-d">${tD}m</div></div>
+                        <div class="time-box"><div class="time-label">Totale</div><div class="time-val val-t">${tT}m</div></div>
                     </div>
                 `;
                 container.appendChild(card);
@@ -130,12 +118,24 @@
         });
     }
 
-    // 实时监听
-    db.ref('active_calls').on('value', () => {
+    // 仅在本地隐藏，不碰数据库
+    function hideCard(id) {
+        hiddenList.push(id);
+        sessionStorage.setItem('hiddenCards', JSON.stringify(hiddenList));
         updateDashboard();
-    });
+    }
 
-    // 每 30 秒自动强制重算时间（处理分钟跳数）
+    // 重置视图，让隐藏的卡片回来
+    function resetHidden() {
+        hiddenList = [];
+        sessionStorage.removeItem('hiddenCards');
+        updateDashboard();
+    }
+
+    // 监听云端变化（A或B端改了数据，C端自动更新）
+    db.ref('active_calls').on('value', updateDashboard);
+    
+    // 每30秒自动重算时间
     setInterval(updateDashboard, 30000);
 </script>
 </body>
