@@ -188,8 +188,7 @@
         5: ['501','501bis','502','502bis','503','503bis','504','504bis','505','505bis','506','506bis','507','507bis','508','508bis']
     };
     
-    // 逻辑修正 1: 清空快捷键定义
-    const shortcuts = {}; 
+    const shortcuts = {}; // 保持清空
     
     let currentUserName = localStorage.getItem('userName') || 'Hu_Shan';
     let themeConfig = JSON.parse(localStorage.getItem('pianoThemes') || '{"1":"#000000","2":"#0077b6","3":"#1b5e20","4":"#311b92","5":"#c2185b"}');
@@ -199,40 +198,57 @@
     let undoStack = [], curPiano = 1, tempLog = null, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0, usedShortcutsInSession = {}; 
     let isInitialLoad = true; 
 
+    // --- 核心修复：数据变化实时同步 ---
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        let redPiano = 0, oldestOrangePiano = 0, oldestTime = Infinity;
+        
+        // 1. 监测是否有新呼叫 (弹窗)
+        Object.keys(data).forEach(id => {
+            if (data[id].status === 'orange' && (!act[id] || act[id].status !== 'orange')) {
+                if(!isInitialLoad) showCallAlert(id);
+            }
+        });
+
+        // 2. 确定跳转楼层 (寻找红色任务或最早的橙色任务)
+        let redPiano = 0, oldestOrangePiano = 0, oldestTime = Infinity, hasAnyRed = false;
         for(let p=1; p<=5; p++) {
             pianoData[p].forEach(id => {
                 const item = data[id];
                 if(item) {
-                    if(item.status === 'red' && redPiano === 0) redPiano = p;
+                    if(item.status === 'red') { 
+                        if(redPiano === 0) redPiano = p; 
+                        hasAnyRed = true; 
+                    }
                     if(item.status === 'orange' && item.startA < oldestTime) {
                         oldestTime = item.startA; oldestOrangePiano = p;
                     }
                 }
             });
-            Object.keys(data).forEach(id => {
-               if(data[id].status === 'orange' && (!act[id] || act[id].status !== 'orange')) {
-                   if(!isInitialLoad) showCallAlert(id);
-               }
-            });
         }
-        if(isInitialLoad) {
-            curPiano = redPiano || oldestOrangePiano || 1;
+
+        // 3. 自动跳转逻辑
+        if (isInitialLoad || (!hasAnyRed && oldestOrangePiano !== 0)) {
+            const target = redPiano || oldestOrangePiano || 1;
+            if (target !== curPiano) {
+                curPiano = target;
+                document.body.className = 'p' + target;
+                applyTheme(); // 内部包含 renderGrid()
+            }
             isInitialLoad = false;
         }
-        act = data;
+
+        // 4. --- 强制性更新 ---
+        // 即使不跳转楼层，只要数据变了，就必须重绘当前界面
+        act = data; 
         saveState();
-        renderGrid();
-        applyTheme();
+        renderGrid();     // 刷新按钮状态
+        updateGlobalBadges(); // 刷新Piano按钮红点
     });
 
     function saveState() { 
         localStorage.setItem('act_v7', JSON.stringify(act)); 
         localStorage.setItem('logs_v7', JSON.stringify(logs)); 
         localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
-        updateGlobalBadges(); 
     }
 
     function updateGlobalBadges() {
@@ -251,14 +267,13 @@
 
     function handleMachineClick(id) {
         const now = Date.now();
-        // 逻辑修正 2: 灰色按钮点击无效
         if (!act[id]) return; 
         
         if (act[id].status === 'orange') {
-            act[id].status = 'red'; act[id].startD = now;
-            db.ref('active_calls/' + id).update({ status: 'red', startD: now });
+            // 接单：改为红色并记下接单时间 (startB) 用于看板计算等待时间
+            db.ref('active_calls/' + id).update({ status: 'red', startD: now, startB: now });
         } else if (act[id].status === 'red') {
-            // 逻辑修正 3: 更新为 completed 同步 A 端
+            // 完工：改为 completed
             db.ref('active_calls/' + id).update({ status: 'completed', techName: currentUserName, endT: now });
             let startD = act[id].startD || act[id].startA;
             tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - act[id].startA) / 60000), tD: Math.round((now - startD) / 60000), st: act[id].startA };
@@ -276,7 +291,6 @@
             b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : s.status === 'orange' ? 'waiting' : '') : 'gr');
             b.innerText = i; 
             
-            // 逻辑修正 4: 强制维持文字颜色，不准变蓝
             if (s && (s.status === 'red' || s.status === 'orange')) {
                 b.style.color = "#ffffff"; 
             } else {
@@ -299,21 +313,21 @@
         if(p===curPiano) return; 
         const gd = document.getElementById('g'); 
         gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); 
-        setTimeout(() => { curPiano = p; document.body.className = 'p' + p; applyTheme(); gd.className = ''; }, 150); 
+        setTimeout(() => { curPiano = p; applyTheme(); gd.className = ''; }, 150); 
     }
 
     function applyTheme() { 
         const c=themeConfig[curPiano]; 
+        document.body.className = 'p' + curPiano;
         document.querySelectorAll('.p-btn').forEach((b,i)=>{ 
             b.style.backgroundColor=(i+1===curPiano)?c:'#f2f2f7'; 
             b.classList.toggle('active',i+1===curPiano); 
         }); 
-        document.getElementById('floorColor').value=c; renderGrid(); 
+        document.getElementById('floorColor').value=c; 
+        renderGrid(); 
     }
     
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
-    
-    // 逻辑修正 5: 让 handleShortcut 失效
     function handleShortcut(event) { return; }
 
     function renderLogs() {
@@ -383,6 +397,9 @@
         });
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
+
+    function showCallAlert(id) { document.getElementById('alertLinea').innerText = id; document.getElementById('callAlert').style.display = 'flex'; new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{}); }
+    function closeAlert() { document.getElementById('callAlert').style.display = 'none'; }
 
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
     document.addEventListener('touchend', e=>{ 
