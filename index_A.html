@@ -16,52 +16,48 @@
         
         body { 
             font-family: -apple-system, sans-serif; background: var(--bg); 
-            margin: 0; display: flex; flex-direction: column; height: 100vh; 
-            padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
+            margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; 
+            padding: env(safe-area-inset-top) 25px env(safe-area-inset-bottom) 25px;
         }
 
-        .header { padding: 40px 0 20px 0; text-align: center; }
-        h1 { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; }
+        .header { padding: 30px 0 20px 0; text-align: center; width: 100%; }
+        h1 { font-size: 22px; font-weight: 900; margin: 0; text-transform: uppercase; }
 
-        .input-box { margin-bottom: 30px; }
+        .input-box { width: 100%; margin-bottom: 25px; }
         input { 
-            width: 100%; padding: 20px; border-radius: 18px; border: 2px solid #ddd; 
-            font-size: 28px; font-weight: 800; text-align: center; outline: none; background: #fff;
+            width: 100%; padding: 18px; border-radius: 18px; border: 2px solid #eee; 
+            font-size: 32px; font-weight: 800; text-align: center; outline: none; background: #fff;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
 
-        /* 核心大按钮样式 */
         .main-btn {
-            flex: 1; margin-bottom: 40px; border-radius: 40px; display: flex;
+            width: 100%; max-width: 340px; height: 480px; 
+            border-radius: 40px; display: flex;
             flex-direction: column; align-items: center; justify-content: center;
             transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
         }
 
-        /* 初始状态：白色 */
         .status-none { background: #fff; border: 4px solid var(--gray); color: #000; }
-        
-        /* 等待状态：橙色闪烁 */
         .status-orange { background: var(--orange); color: #fff; animation: pulse 1.5s infinite; }
-        
-        /* 维修状态：红色 */
         .status-red { background: var(--red); color: #fff; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-        .btn-icon { font-size: 60px; margin-bottom: 15px; }
-        .btn-text { font-size: 22px; font-weight: 900; text-transform: uppercase; text-align: center; }
+        .btn-icon { font-size: 70px; margin-bottom: 20px; }
+        .btn-text { font-size: 20px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 20px; line-height: 1.3; }
         
-        .footer-text { text-align: center; padding-bottom: 20px; font-size: 11px; font-weight: 700; color: #ccc; }
+        .footer-text { margin-top: auto; padding: 25px 0; font-size: 11px; font-weight: 700; color: #ccc; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Chiamata Linea</h1>
+        <h1>CHIAMATA LINEA</h1>
     </div>
 
     <div class="input-box">
-        <input type="text" id="lineaInput" placeholder="NUMERO LINEA" autocomplete="off">
+        <input type="text" id="lineaInput" placeholder="---" autocomplete="off">
     </div>
 
     <button id="mainBtn" class="main-btn status-none" onclick="sendCall()">
@@ -72,7 +68,6 @@
     <div class="footer-text">© 2026 HU SHAN. ESSILORLUXOTTICA.</div>
 
 <script>
-    // --- FIREBASE 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -83,28 +78,39 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // 合法的 Linea 白名单
+    const validLines = [];
+    [1, 2, 3, 4, 5].forEach(p => {
+        for(let i=1; i<=8; i++) {
+            validLines.push(`${p}0${i}`);
+            validLines.push(`${p}0${i}bis`);
+        }
+    });
+
     const mainBtn = document.getElementById('mainBtn');
     const statusText = document.getElementById('statusText');
     const btnIcon = document.getElementById('btnIcon');
     const lineaInput = document.getElementById('lineaInput');
 
-    // 1. 从本地恢复机台号
     let currentId = localStorage.getItem('myLinea') || "";
     if(currentId) {
         lineaInput.value = currentId;
         startListening(currentId);
     }
 
-    // 2. 发起呼叫
     function sendCall() {
-        const id = lineaInput.value.trim().toUpperCase();
-        if(!id) return alert("Inserire numero linea!");
+        const id = lineaInput.value.trim().toLowerCase();
+        
+        if(!id) return;
 
-        // 保存机台号到本地，下次不用重打
+        if(!validLines.includes(id)) {
+            alert("NUMERO LINEA ERRATO!\nInserire un numero da 101 a 508bis.");
+            return;
+        }
+
         localStorage.setItem('myLinea', id);
         currentId = id;
 
-        // 发送到云端
         db.ref('active_calls/' + id).set({
             startA: Date.now(),
             status: 'orange'
@@ -113,21 +119,16 @@
         startListening(id);
     }
 
-    // 3. 核心：监听云端状态变化
     function startListening(id) {
         db.ref('active_calls/' + id).on('value', (snapshot) => {
             const data = snapshot.val();
-
-            // 如果数据被彻底删除，变回初始状态
-            if (!data) {
-                setInitialUI();
-                return;
-            }
+            if (!data) { setInitialUI(); return; }
 
             switch(data.status) {
                 case 'orange':
                     mainBtn.className = "main-btn status-orange";
-                    statusText.innerText = "RICHIESTA INVIATA...";
+                    // 修改点：改为 In attesa
+                    statusText.innerText = "IN ATTESA";
                     btnIcon.innerText = "⏳";
                     break;
                 case 'red':
@@ -136,10 +137,7 @@
                     btnIcon.innerText = "🛠";
                     break;
                 case 'completed':
-                    // B端修完了，A端刷新状态为白色
                     setInitialUI();
-                    // 这里可以根据需要删除这条 completed 记录，确保数据库整洁
-                    // db.ref('active_calls/' + id).remove(); 
                     break;
                 default:
                     setInitialUI();
@@ -153,13 +151,11 @@
         btnIcon.innerText = "⚡️";
     }
 
-    // 当输入框手动修改时，停止旧的监听，开启新的监听（如果新ID已有任务）
     lineaInput.onchange = () => {
-        const newId = lineaInput.value.trim().toUpperCase();
+        const newId = lineaInput.value.trim().toLowerCase();
         if(newId && newId !== currentId) {
-            db.ref('active_calls/' + currentId).off(); // 停止旧监听
+            db.ref('active_calls/' + currentId).off();
             currentId = newId;
-            localStorage.setItem('myLinea', newId);
             startListening(newId);
         }
     };
