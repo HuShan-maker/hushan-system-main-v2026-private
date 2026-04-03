@@ -199,11 +199,7 @@
 
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        
-        let redPiano = 0;
-        let oldestOrangePiano = 0;
-        let oldestTime = Infinity;
-
+        let redPiano = 0, oldestOrangePiano = 0, oldestTime = Infinity;
         for(let p=1; p<=5; p++) {
             pianoData[p].forEach(id => {
                 const item = data[id];
@@ -214,19 +210,16 @@
                     }
                 }
             });
-            // 运行时弹窗监测
             Object.keys(data).forEach(id => {
                if(data[id].status === 'orange' && (!act[id] || act[id].status !== 'orange')) {
                    if(!isInitialLoad) showCallAlert(id);
                }
             });
         }
-
         if(isInitialLoad) {
             curPiano = redPiano || oldestOrangePiano || 1;
             isInitialLoad = false;
         }
-
         act = data;
         saveState();
         renderGrid();
@@ -256,13 +249,12 @@
 
     function handleMachineClick(id) {
         const now = Date.now();
-        if (!act[id]) {
-            act[id] = { startA: now, status: 'red', startD: now };
-            db.ref('active_calls/' + id).set(act[id]);
-        } else if (act[id].status === 'orange') {
+        if (!act[id]) return; // 逻辑修正：无颜色点击无效
+        if (act[id].status === 'orange') {
             act[id].status = 'red'; act[id].startD = now;
             db.ref('active_calls/' + id).update({ status: 'red', startD: now });
         } else if (act[id].status === 'red') {
+            // 完工逻辑：更新为 completed 同步 A 端
             db.ref('active_calls/' + id).update({ status: 'completed', techName: currentUserName, endT: now });
             let startD = act[id].startD || act[id].startA;
             tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - act[id].startA) / 60000), tD: Math.round((now - startD) / 60000), st: act[id].startA };
@@ -273,23 +265,15 @@
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const allOrangeIds = Object.keys(act).filter(key => act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
-
         pianoData[curPiano].forEach(i => {
-            const wrap = document.createElement('div');
-            wrap.className = 'btn-wrap';
-            const b = document.createElement('button');
-            const s = act[i];
+            const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
+            const b = document.createElement('button'); const s = act[i];
             b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : s.status === 'orange' ? 'waiting' : '') : 'gr');
-            b.innerText = i; 
-            if (!s) b.style.color = themeConfig[curPiano];
-            b.onclick = () => handleMachineClick(i);
-            wrap.appendChild(b);
-
+            b.innerText = i; if (!s) b.style.color = themeConfig[curPiano];
+            b.onclick = () => handleMachineClick(i); wrap.appendChild(b);
             if (s && s.status === 'orange') {
                 const qNum = allOrangeIds.indexOf(i) + 1;
-                const badge = document.createElement('div');
-                badge.className = 'badge'; badge.innerText = qNum;
-                wrap.appendChild(badge);
+                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = qNum; wrap.appendChild(badge);
             }
             gd.appendChild(wrap);
         });
@@ -311,23 +295,27 @@
             b.style.backgroundColor=(i+1===curPiano)?c:'#f2f2f7'; 
             b.classList.toggle('active',i+1===curPiano); 
         }); 
-        document.getElementById('floorColor').value=c; 
-        renderGrid(); 
+        document.getElementById('floorColor').value=c; renderGrid(); 
     }
     
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
-    function handleShortcut(event) { const i = event.target; const v = i.value.toLowerCase(); if (v.length === 1 && shortcuts[v] && !usedShortcutsInSession[v]) { i.value = shortcuts[v]; usedShortcutsInSession[v] = true; } }
+    
+    function handleShortcut(event) { 
+        const i = event.target; const v = i.value.toLowerCase(); 
+        if (v.length === 1 && shortcuts[v] && !usedShortcutsInSession[v]) { 
+            i.value = shortcuts[v]; usedShortcutsInSession[v] = true; 
+        } 
+    }
+
     function renderLogs() {
         const container = document.getElementById('logContainer');
         const expandedDays = new Set();
         container.querySelectorAll('.day-section:not(.collapsed) span').forEach(el => expandedDays.add(el.innerText.trim()));
         container.innerHTML = '';
         const oggi = new Date().toLocaleDateString('it-IT');
-        const groups = {}; 
-        dayHistory.forEach(d => groups[d] = []);
+        const groups = {}; dayHistory.forEach(d => groups[d] = []);
         logs.forEach((l, idx) => { if (groups[l.day]) groups[l.day].push({ ...l, originalIndex: idx }); });
         const sortedDays = Object.keys(groups).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join('')));
-        
         sortedDays.forEach(day => {
             const section = document.createElement('div');
             const isCollapsed = expandedDays.size === 0 ? (day !== oggi) : !expandedDays.has(day);
@@ -339,7 +327,7 @@
                 </div>
                 <div class="day-content">
                     <table>
-                        <thead><tr><th>LINEA</th><th>INIZIO</th><th class="col-time">ATTESA & DURATA</th><th>CAUSALE</th><th><span class="undo-btn" onclick="performUndo(event)">↺</span></th></tr></thead>
+                        <thead><tr><th>LINEA</th><th>INIZIO</th><th class="col-time">A & D</th><th>CAUSALE</th><th><span class="undo-btn" onclick="performUndo(event)">↺</span></th></tr></thead>
                         <tbody>${dayLogs.map(l => `<tr>
                             <td><b>${l.i === 'FUORI' ? 'F. Linea' : l.i}</b></td>
                             <td>${l.s}</td>
