@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Board Control Sync v7.0</title>
+    <title>C - Board Control Final v7.2</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -20,12 +20,10 @@
             display: flex; flex-direction: column; height: 100vh;
         }
 
-        /* Header */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; flex-shrink: 0; }
         h1 { font-size: 22px; font-weight: 900; margin: 0; letter-spacing: -1px; }
         .reg-btn { background: #000; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; }
 
-        /* 卡片网格 */
         #activeList { 
             flex: 1; overflow-y: auto; display: grid; 
             grid-template-columns: repeat(auto-fill, 180px); 
@@ -36,61 +34,65 @@
             background: var(--white); border-radius: 22px; padding: 16px;
             display: flex; flex-direction: column; justify-content: space-between;
             height: 185px; width: 180px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 2px solid transparent;
-            position: relative; transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 2.5px solid transparent;
+            position: relative; transition: transform 0.2s;
         }
         
-        /* 状态边框控制 */
         .card.st-waiting { border-color: var(--orange); }
         .card.st-working { border-color: var(--red); }
         .card.st-finishing, .card.st-completed { border-color: var(--green); background: #fafffa; }
 
+        /* 卡片右上角删除按钮 */
+        .card-del {
+            position: absolute; top: -8px; right: -8px; 
+            width: 30px; height: 30px; background: var(--red); 
+            color: white; border-radius: 50%; border: 3px solid white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 900; cursor: pointer; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 20;
+        }
+
         .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-linea { font-size: 22px; font-weight: 900; color: var(--text-main); letter-spacing: -1px; }
+        .card-linea { font-size: 24px; font-weight: 900; color: var(--text-main); letter-spacing: -1px; }
         .card-badge { font-size: 9px; font-weight: 900; padding: 4px 8px; border-radius: 8px; text-transform: uppercase; color: #fff; }
 
         .card-causale { 
-            font-size: 13.5px; font-weight: 800; color: #000; 
+            font-size: 14px; font-weight: 800; color: #000; 
             margin: 10px 0; text-transform: uppercase; 
-            height: 32px; line-height: 1.1; 
-            overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
+            height: 34px; line-height: 1.1; overflow: hidden;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
         }
         
-        .card-stats { font-size: 10.5px; font-weight: 600; color: var(--text-sec); line-height: 1.5; margin-top: auto;}
+        .card-stats { font-size: 11px; font-weight: 600; color: var(--text-sec); line-height: 1.4; margin-top: auto; }
         .card-stats b { color: #333; }
 
         .bg-orange { background: var(--orange); }
         .bg-red { background: var(--red); }
         .bg-green { background: var(--green); }
 
-        /* Registro 页面 */
+        /* Registro Archivo */
         #historyPage { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 500; flex-direction: column; padding-top: env(safe-area-inset-top); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 0 20px; border-bottom: 1px solid #f2f2f7; }
-        
         #logContainer { flex: 1; overflow-y: auto; padding: 15px; }
-        .day-header { background: #f2f2f7; padding: 12px 15px; font-size: 14px; font-weight: 800; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; }
-        .day-del-btn { color: var(--red); font-weight: 900; font-size: 18px; margin-right: 12px; }
-
+        .day-header { background: #f2f2f7; padding: 12px 15px; font-size: 14px; font-weight: 800; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { padding: 10px 2px; text-align: center; font-size: 12px; border-bottom: 1px solid #f2f2f7; }
-        th { color: #8e8e93; font-size: 9px; text-transform: uppercase; }
         .del-row { color: var(--red); font-weight: 900; cursor: pointer; font-size: 18px; }
 
-        .footer-text { text-align: center; padding: 15px 0; font-size: 10px; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
+        .footer-text { text-align: center; padding: 15px 0; font-size: 10px; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>BOARD CONTROL</h1>
-        <button class="reg-btn" onclick="showHistory()">Registro</button>
+        <button class="reg-btn" onclick="showHistory()">Archivio</button>
     </div>
 
     <div id="activeList"></div>
 
     <div class="footer-text">© <span id="curYear"></span> HU SHAN. ALL RIGHTS RESERVED.</div>
 
-    <!-- Registro 页面 -->
     <div id="historyPage">
         <div class="v-nav">
             <div style="font-size:28px; cursor:pointer" onclick="closeHistory()">←</div>
@@ -98,9 +100,7 @@
             <div style="width:28px"></div>
         </div>
         <div id="logContainer"></div>
-        <div style="padding:15px; display:flex; gap:10px;">
-            <button style="flex:1; padding:12px; border-radius:10px; border:none; background:#eee; color:var(--red); font-weight:700;" onclick="clearAll()">Svuota Registro</button>
-        </div>
+        <div style="padding:15px;"><button style="width:100%; padding:14px; border-radius:12px; border:none; background:#eee; color:var(--red); font-weight:800;" onclick="clearAll()">SVUOTA TUTTO</button></div>
     </div>
 
 <script>
@@ -114,9 +114,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 独立存储 Key
-    let logs = JSON.parse(localStorage.getItem('c_logs_v15') || '[]');
-    let dayHistory = JSON.parse(localStorage.getItem('c_days_v15') || '[]');
+    let logs = JSON.parse(localStorage.getItem('c_logs_v16') || '[]');
+    let dayHistory = JSON.parse(localStorage.getItem('c_days_v16') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
 
     db.ref('active_calls').on('value', (snapshot) => {
@@ -125,25 +124,23 @@
         Object.keys(data).forEach(id => {
             const item = data[id];
             
-            // --- 核心修改：只有状态是 completed（B端输完原因点保存后）才写入 Registro ---
-            if (item.status === 'completed') {
-                if (!processedStarts.has(item.startA)) {
-                    let startD = item.startD || item.startA;
-                    const newEntry = {
-                        i: id, 
-                        day: new Date(item.startA).toLocaleDateString('it-IT'),
-                        s: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                        tA: Math.round((startD - item.startA) / 60000),
-                        tD: Math.round((item.endT - startD) / 60000),
-                        st: item.startA, 
-                        c: item.causale || "-", 
-                        tech: item.techName || "-"
-                    };
-                    logs.push(newEntry);
-                    processedStarts.add(item.startA);
-                    if (!dayHistory.includes(newEntry.day)) dayHistory.push(newEntry.day);
-                    saveState();
-                }
+            // 只有当 B 端传回最终的 completed 信号时，才存入 Registro
+            if (item.status === 'completed' && !processedStarts.has(item.startA)) {
+                let startD = item.startD || item.startA;
+                const newEntry = {
+                    i: id, 
+                    day: new Date(item.startA).toLocaleDateString('it-IT'),
+                    s: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                    tA: Math.round((startD - item.startA) / 60000),
+                    tD: Math.round((item.endT - startD) / 60000),
+                    st: item.startA, 
+                    c: item.causale || "-", 
+                    tech: item.techName || "-"
+                };
+                logs.push(newEntry);
+                processedStarts.add(item.startA);
+                if (!dayHistory.includes(newEntry.day)) dayHistory.push(newEntry.day);
+                saveState();
             }
         });
 
@@ -152,8 +149,14 @@
     });
 
     function saveState() {
-        localStorage.setItem('c_logs_v15', JSON.stringify(logs));
-        localStorage.setItem('c_days_v15', JSON.stringify(dayHistory));
+        localStorage.setItem('c_logs_v16', JSON.stringify(logs));
+        localStorage.setItem('c_days_v16', JSON.stringify(dayHistory));
+    }
+
+    // 彻底从 Firebase 删除呼叫，防止刷新重复抓取
+    function removeCall(id) {
+        if(!confirm("Eliminare definitivamente questa scheda?")) return;
+        db.ref('active_calls/' + id).remove();
     }
 
     function renderCards(act) {
@@ -162,25 +165,28 @@
         
         Object.keys(act).sort((a,b) => (act[a].status === 'red' ? -1 : 1)).forEach(id => {
             const item = act[id];
+            // 只显示今天的卡片
             if (new Date(item.startA).toLocaleDateString('it-IT') !== today) return;
 
             let wait = item.startB ? Math.round((item.startB-item.startA)/60000)+"m" : "0m";
             let work = (item.endT && item.startB) ? Math.round((item.endT-item.startB)/60000)+"m" : "0m";
             
-            // 状态显示映射
-            let statusLabel = "ATTESA";
-            let colorClass = "orange";
-            if(item.status === 'red') { statusLabel = "LAVORO"; colorClass = "red"; }
-            if(item.status === 'finishing' || item.status === 'completed') { statusLabel = "FINE"; colorClass = "green"; }
+            let statusLabel = item.status === 'orange' ? 'ATTESA' : (item.status === 'red' ? 'LAVORO' : 'FINE');
+            let colorClass = item.status === 'orange' ? 'orange' : (item.status === 'red' ? 'red' : 'green');
             
             const card = document.createElement('div');
             card.className = `card st-${item.status}`;
+            
+            // 只有完成状态（或输入中）才显示右上角的删除 X 按钮
+            let delBtn = (item.status === 'completed' || item.status === 'finishing') ? `<div class="card-del" onclick="removeCall('${id}')">×</div>` : '';
+
             card.innerHTML = `
+                ${delBtn}
                 <div class="card-top">
                     <div class="card-linea">${id}</div>
                     <div class="card-badge bg-${colorClass}">${statusLabel}</div>
                 </div>
-                <div class="card-causale">${item.causale || (item.status === 'orange' ? 'CHIAMATA' : 'IN RIPARAZIONE')}</div>
+                <div class="card-causale">${item.causale || (item.status === 'orange' ? 'CHIAMATA APERTA' : 'INTERVENTO IN CORSO')}</div>
                 <div class="card-stats">
                     Wait: <b>${wait}</b> | Work: <b>${work}</b><br>
                     Tech: <b>${item.techName||'-'}</b>
@@ -196,7 +202,7 @@
             const section = document.createElement('div');
             section.innerHTML = `
                 <div class="day-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-                    <span class="day-del-btn" onclick="deleteDay(event, '${day}')">×</span>${day}
+                    <span style="color:var(--red); margin-right:12px; cursor:pointer" onclick="deleteDay(event, '${day}')">×</span>${day}
                 </div>
                 <div class="day-content">
                     <table>
@@ -216,17 +222,14 @@
     
     function deleteDay(e, day) {
         e.stopPropagation();
-        if(!confirm("Cancellare tutto il giorno " + day + "?")) return;
-        logs = logs.filter(l => {
-            if(l.day === day) processedStarts.delete(l.st);
-            return l.day !== day;
-        });
+        if(!confirm("Eliminare dati del " + day + "?")) return;
+        logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; });
         dayHistory = dayHistory.filter(d => d !== day);
         saveState(); renderLogs();
     }
 
     function clearAll() {
-        if(!confirm("Svuotare l'intero registro?")) return;
+        if(!confirm("Svuotare tutto l'archivio?")) return;
         logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs();
     }
 
