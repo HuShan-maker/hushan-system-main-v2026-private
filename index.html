@@ -195,7 +195,7 @@
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
     let undoStack = [], curPiano = 1, tempLog = null, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
     let isInitialLoad = true; 
-    let currentActiveId = null; // 用于临时存储当前操作的机台ID
+    let currentActiveId = null; // 用于记录当前正在操作的机台ID
 
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -222,7 +222,7 @@
             isInitialLoad = false;
         }
 
-        act = data; 
+        act = data; 
         saveState();
         renderGrid(); 
         updateGlobalBadges(); 
@@ -247,7 +247,6 @@
         }
     }
 
-    // --- 修改 handleMachineClick 实现与 C 端联动 ---
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) return; 
@@ -255,11 +254,10 @@
         if (act[id].status === 'orange') {
             db.ref('active_calls/' + id).update({ status: 'red', startD: now, startB: now });
         } else if (act[id].status === 'red') {
-            currentActiveId = id; // 记录当前ID
-            
-            // 抢先更新云端状态为 completed，并带上占位符原因
+            // 第一步：状态改为 finishing，C端显示绿卡并显示输入中
+            currentActiveId = id;
             db.ref('active_calls/' + id).update({ 
-                status: 'completed', 
+                status: 'finishing', 
                 techName: currentUserName, 
                 endT: now,
                 causale: "IN SCRITTURA..." 
@@ -318,16 +316,18 @@
 
     function showModal(id) { document.getElementById('modal').style.display='flex'; document.getElementById('causaleInput').value=''; setTimeout(()=>document.getElementById('causaleInput').focus(),150); }
     
-    // --- 修改 saveCausale 实现最终同步 ---
     function saveCausale() {
         const val = document.getElementById('causaleInput').value.trim() || "-";
-        tempLog.c = val; // 这里保存到 B 端自己的本地历史
+        tempLog.c = val; 
         logs.push(tempLog);
         if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day);
         
-        // 将真正的 Causale 推送到云端，供 C 端记录
+        // 第二步：正式改为 completed，触发 C 端真正的结单记录
         if (currentActiveId) {
-            db.ref('active_calls/' + currentActiveId).update({ causale: val });
+            db.ref('active_calls/' + currentActiveId).update({ 
+                status: 'completed',
+                causale: val 
+            });
         }
 
         saveState(); 
@@ -401,8 +401,9 @@
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
-    function showCallAlert(id) { document.getElementById('alertLinea').innerText = id; document.getElementById('callAlert').style.display = 'flex'; new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{}); }
-    function closeAlert() { document.getElementById('callAlert').style.display = 'none'; }
+    document.getElementById('userNameDisp').innerText = currentUserName;
+    document.getElementById('regNameDisp').innerText = currentUserName;
+    document.getElementById('curYear').innerText = new Date().getFullYear();
 
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
     document.addEventListener('touchend', e=>{ 
@@ -412,10 +413,6 @@
             else if(d<0 && curPiano<5) switchPiano(curPiano+1,'left'); 
         } 
     });
-
-    document.getElementById('userNameDisp').innerText = currentUserName;
-    document.getElementById('regNameDisp').innerText = currentUserName;
-    document.getElementById('curYear').innerText = new Date().getFullYear();
 </script>
 </body>
 </html>
