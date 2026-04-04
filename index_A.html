@@ -23,10 +23,24 @@
         .header { padding: 30px 0 20px 0; text-align: center; width: 100%; }
         h1 { font-size: 22px; font-weight: 900; margin: 0; text-transform: uppercase; }
 
-        .input-box { width: 100%; margin-bottom: 25px; }
+        /* --- 输入框容器优化 --- */
+        .input-box { 
+            width: 100%; 
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px; 
+        }
         input { 
-            width: 100%; padding: 18px; border-radius: 18px; border: 2px solid #eee; 
-            font-size: 32px; font-weight: 800; text-align: center; outline: none; background: #fff;
+            /* 修改点：不再占满全屏，限制宽度为 200px */
+            width: 200px; 
+            padding: 15px; 
+            border-radius: 18px; 
+            border: 2px solid #eee; 
+            font-size: 28px; 
+            font-weight: 800; 
+            text-align: center; 
+            outline: none; 
+            background: #fff;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
 
@@ -47,7 +61,6 @@
         .btn-icon { font-size: 70px; margin-bottom: 20px; }
         .btn-text { font-size: 20px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 20px; line-height: 1.3; }
         
-        /* 底部版权样式强化 */
         .footer-text { 
             margin-top: auto; 
             padding: 20px 0; 
@@ -87,7 +100,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 动态年份更新
     document.getElementById('year').innerText = new Date().getFullYear();
 
     const validLines = [];
