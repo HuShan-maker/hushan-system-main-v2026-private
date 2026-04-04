@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Board Control Final v7.2</title>
+    <title>C - Board Control Strip v8.0</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -16,25 +16,26 @@
         
         body { 
             font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; 
-            padding: env(safe-area-inset-top) 10px 20px 10px;
+            padding: env(safe-area-inset-top) 15px 20px 15px;
             display: flex; flex-direction: column; height: 100vh;
         }
 
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; flex-shrink: 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 5px; flex-shrink: 0; }
         h1 { font-size: 22px; font-weight: 900; margin: 0; letter-spacing: -1px; }
         .reg-btn { background: #000; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; }
 
+        /* 修改为单列布局 */
         #activeList { 
-            flex: 1; overflow-y: auto; display: grid; 
-            grid-template-columns: repeat(auto-fill, 180px); 
-            gap: 15px; padding: 10px; justify-content: center; align-content: flex-start;
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+            gap: 12px; padding: 10px 0; align-content: flex-start;
         }
 
+        /* 横条卡片样式 */
         .card { 
-            background: var(--white); border-radius: 22px; padding: 16px;
-            display: flex; flex-direction: column; justify-content: space-between;
-            height: 185px; width: 180px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 2.5px solid transparent;
+            background: var(--white); border-radius: 18px; padding: 12px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; min-height: 85px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 2px solid transparent;
             position: relative; transition: transform 0.2s;
         }
         
@@ -42,28 +43,24 @@
         .card.st-working { border-color: var(--red); }
         .card.st-finishing, .card.st-completed { border-color: var(--green); background: #fafffa; }
 
-        /* 卡片右上角删除按钮 */
+        /* 缩小后的删除按钮 */
         .card-del {
-            position: absolute; top: -8px; right: -8px; 
-            width: 30px; height: 30px; background: var(--red); 
-            color: white; border-radius: 50%; border: 3px solid white;
+            position: absolute; top: -6px; right: -6px; 
+            width: 22px; height: 22px; background: var(--red); 
+            color: white; border-radius: 50%; border: 2px solid white;
             display: flex; align-items: center; justify-content: center;
-            font-size: 18px; font-weight: 900; cursor: pointer; 
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 20;
+            font-size: 14px; font-weight: 900; cursor: pointer; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 20;
         }
 
-        .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-linea { font-size: 24px; font-weight: 900; color: var(--text-main); letter-spacing: -1px; }
-        .card-badge { font-size: 9px; font-weight: 900; padding: 4px 8px; border-radius: 8px; text-transform: uppercase; color: #fff; }
+        .card-left { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        .card-linea { font-size: 20px; font-weight: 900; color: var(--text-main); }
+        .card-causale { font-size: 15px; font-weight: 800; color: #000; text-transform: uppercase; }
 
-        .card-causale { 
-            font-size: 14px; font-weight: 800; color: #000; 
-            margin: 10px 0; text-transform: uppercase; 
-            height: 34px; line-height: 1.1; overflow: hidden;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
-        }
+        .card-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .card-badge { font-size: 9px; font-weight: 900; padding: 4px 8px; border-radius: 8px; text-transform: uppercase; color: #fff; display: inline-block; }
         
-        .card-stats { font-size: 11px; font-weight: 600; color: var(--text-sec); line-height: 1.4; margin-top: auto; }
+        .card-stats { font-size: 10px; font-weight: 600; color: var(--text-sec); line-height: 1.3; }
         .card-stats b { color: #333; }
 
         .bg-orange { background: var(--orange); }
@@ -124,7 +121,7 @@
         Object.keys(data).forEach(id => {
             const item = data[id];
             
-            // 只有当 B 端传回最终的 completed 信号时，才存入 Registro
+            // 记录成功后不再重复刷新的核心逻辑
             if (item.status === 'completed' && !processedStarts.has(item.startA)) {
                 let startD = item.startD || item.startA;
                 const newEntry = {
@@ -153,9 +150,8 @@
         localStorage.setItem('c_days_v16', JSON.stringify(dayHistory));
     }
 
-    // 彻底从 Firebase 删除呼叫，防止刷新重复抓取
     function removeCall(id) {
-        if(!confirm("Eliminare definitivamente questa scheda?")) return;
+        if(!confirm("Eliminare definitivamente?")) return;
         db.ref('active_calls/' + id).remove();
     }
 
@@ -163,9 +159,13 @@
         const list = document.getElementById('activeList'); list.innerHTML = '';
         const today = new Date().toLocaleDateString('it-IT');
         
-        Object.keys(act).sort((a,b) => (act[a].status === 'red' ? -1 : 1)).forEach(id => {
+        // 关键修改：按 startA 倒序排列，最后维修的在最上面
+        const sortedKeys = Object.keys(act).sort((a, b) => {
+            return (act[b].startA || 0) - (act[a].startA || 0);
+        });
+
+        sortedKeys.forEach(id => {
             const item = act[id];
-            // 只显示今天的卡片
             if (new Date(item.startA).toLocaleDateString('it-IT') !== today) return;
 
             let wait = item.startB ? Math.round((item.startB-item.startA)/60000)+"m" : "0m";
@@ -177,19 +177,20 @@
             const card = document.createElement('div');
             card.className = `card st-${item.status}`;
             
-            // 只有完成状态（或输入中）才显示右上角的删除 X 按钮
             let delBtn = (item.status === 'completed' || item.status === 'finishing') ? `<div class="card-del" onclick="removeCall('${id}')">×</div>` : '';
 
             card.innerHTML = `
                 ${delBtn}
-                <div class="card-top">
+                <div class="card-left">
                     <div class="card-linea">${id}</div>
-                    <div class="card-badge bg-${colorClass}">${statusLabel}</div>
+                    <div class="card-causale">${item.causale || (item.status === 'orange' ? 'CHIAMATA APERTA' : 'INTERVENTO IN CORSO')}</div>
                 </div>
-                <div class="card-causale">${item.causale || (item.status === 'orange' ? 'CHIAMATA APERTA' : 'INTERVENTO IN CORSO')}</div>
-                <div class="card-stats">
-                    Wait: <b>${wait}</b> | Work: <b>${work}</b><br>
-                    Tech: <b>${item.techName||'-'}</b>
+                <div class="card-right">
+                    <div class="card-badge bg-${colorClass}">${statusLabel}</div>
+                    <div class="card-stats">
+                        W: <b>${wait}</b> | R: <b>${work}</b><br>
+                        T: <b>${item.techName||'-'}</b>
+                    </div>
                 </div>`;
             list.appendChild(card);
         });
@@ -202,7 +203,7 @@
             const section = document.createElement('div');
             section.innerHTML = `
                 <div class="day-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-                    <span style="color:var(--red); margin-right:12px; cursor:pointer" onclick="deleteDay(event, '${day}')">×</span>${day}
+                    <span class="day-del-btn" onclick="deleteDay(event, '${day}')">×</span>${day}
                 </div>
                 <div class="day-content">
                     <table>
@@ -222,14 +223,14 @@
     
     function deleteDay(e, day) {
         e.stopPropagation();
-        if(!confirm("Eliminare dati del " + day + "?")) return;
+        if(!confirm("Eliminare giorno?")) return;
         logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; });
         dayHistory = dayHistory.filter(d => d !== day);
         saveState(); renderLogs();
     }
 
     function clearAll() {
-        if(!confirm("Svuotare tutto l'archivio?")) return;
+        if(!confirm("Svuotare tutto?")) return;
         logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs();
     }
 
