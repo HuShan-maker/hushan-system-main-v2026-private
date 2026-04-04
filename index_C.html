@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Board Control Professional v6.6</title>
+    <title>C - Board Control Sync v7.0</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -14,70 +14,69 @@
         :root { --bg: #f2f2f7; --red: #ff3b30; --orange: #ff9500; --green: #34c759; --white: #ffffff; --text-main: #1c1c1e; --text-sec: #8e8e93; }
         * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
         
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: env(safe-area-inset-top) 10px 20px 10px; display: flex; flex-direction: column; height: 100vh; }
-        
+        body { 
+            font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; 
+            padding: env(safe-area-inset-top) 10px 20px 10px;
+            display: flex; flex-direction: column; height: 100vh;
+        }
+
         /* Header */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; flex-shrink: 0; }
         h1 { font-size: 22px; font-weight: 900; margin: 0; letter-spacing: -1px; }
         .reg-btn { background: #000; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; }
 
-        /* 主页卡片网格 - 固定尺寸 180px */
+        /* 卡片网格 */
         #activeList { 
             flex: 1; overflow-y: auto; display: grid; 
             grid-template-columns: repeat(auto-fill, 180px); 
-            gap: 15px; padding: 10px; justify-content: center; align-content: flex-start; 
+            gap: 15px; padding: 10px; justify-content: center; align-content: flex-start;
         }
+
         .card { 
-            background: var(--white); border-radius: 22px; padding: 16px; 
-            display: flex; flex-direction: column; justify-content: space-between; 
-            height: 185px; width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-            border: 1.5px solid transparent; transition: transform 0.2s; position: relative; overflow: hidden; 
+            background: var(--white); border-radius: 22px; padding: 16px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            height: 185px; width: 180px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 2px solid transparent;
+            position: relative; transition: all 0.3s ease;
         }
-        .st-waiting { border-color: var(--orange); animation: pulseO 2s infinite; }
-        .st-working { border-color: var(--red); }
-        .st-done { border-color: var(--green); background: #fafffa; }
-        @keyframes pulseO { 0% { box-shadow: 0 0 0 0 rgba(255,149,0,0.4); } 70% { box-shadow: 0 0 0 10px rgba(255,149,0,0); } 100% { box-shadow: 0 0 0 0 rgba(255,149,0,0); } }
         
+        /* 状态边框控制 */
+        .card.st-waiting { border-color: var(--orange); }
+        .card.st-working { border-color: var(--red); }
+        .card.st-finishing, .card.st-completed { border-color: var(--green); background: #fafffa; }
+
         .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-linea { font-size: 22px; font-weight: 900; color: var(--text-main); letter-spacing: -1px; line-height: 1.2; }
+        .card-linea { font-size: 22px; font-weight: 900; color: var(--text-main); letter-spacing: -1px; }
         .card-badge { font-size: 9px; font-weight: 900; padding: 4px 8px; border-radius: 8px; text-transform: uppercase; color: #fff; }
+
+        .card-causale { 
+            font-size: 13.5px; font-weight: 800; color: #000; 
+            margin: 10px 0; text-transform: uppercase; 
+            height: 32px; line-height: 1.1; 
+            overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
+        }
         
-        .card-causale { font-size: 13.5px; font-weight: 800; color: #000; margin: 10px 0; text-transform: uppercase; height: 32px; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .card-stats { font-size: 10.5px; font-weight: 600; color: var(--text-sec); line-height: 1.5; margin-top: auto;}
         .card-stats b { color: #333; }
-        
-        .bg-orange { background: var(--orange); } 
-        .bg-red { background: var(--red); } 
+
+        .bg-orange { background: var(--orange); }
+        .bg-red { background: var(--red); }
         .bg-green { background: var(--green); }
 
         /* Registro 页面 */
         #historyPage { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 500; flex-direction: column; padding-top: env(safe-area-inset-top); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 0 20px; border-bottom: 1px solid #f2f2f7; }
-        .back-arrow { font-size: 28px; cursor: pointer; }
         
-        #logContainer { flex: 1; overflow-y: auto; padding: 10px 15px; }
-        .day-section { margin-bottom: 15px; }
-        .day-header { background: #f2f2f7; padding: 12px 15px; font-size: 14px; font-weight: 800; border-radius: 12px; display: flex; align-items: center; cursor: pointer; }
-        .day-del-btn { color: var(--red); font-weight: 900; font-size: 18px; margin-right: 12px; cursor: pointer; }
-        .day-header::after { content: '▼'; font-size: 10px; color: #8e8e93; margin-left: auto; }
-        .day-section.collapsed .day-header::after { content: '▶'; }
-        .day-section.collapsed .day-content { display: none; }
-        
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 5px; }
-        th, td { padding: 12px 2px; text-align: center; font-size: 12px; border-bottom: 1px solid #f2f2f7; }
+        #logContainer { flex: 1; overflow-y: auto; padding: 15px; }
+        .day-header { background: #f2f2f7; padding: 12px 15px; font-size: 14px; font-weight: 800; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; }
+        .day-del-btn { color: var(--red); font-weight: 900; font-size: 18px; margin-right: 12px; }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { padding: 10px 2px; text-align: center; font-size: 12px; border-bottom: 1px solid #f2f2f7; }
         th { color: #8e8e93; font-size: 9px; text-transform: uppercase; }
-        .del-row { color: var(--red); font-weight: 900; font-size: 18px; cursor: pointer; }
-        .undo-btn { background: #eee; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-        
-        .v-footer { padding: 15px; border-top: 1px solid #f2f2f7; display: flex; gap: 10px; }
-        .footer-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; }
+        .del-row { color: var(--red); font-weight: 900; cursor: pointer; font-size: 18px; }
 
-        /* Copyright */
-        .footer-text { text-align: center; padding: 15px 0; font-size: 10px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
-
-        /* Modal */
-        #confirmModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .footer-text { text-align: center; padding: 15px 0; font-size: 10px; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -89,30 +88,18 @@
 
     <div id="activeList"></div>
 
-    <div class="footer-text">© <span id="curYear">2026</span> HU SHAN. ALL RIGHTS RESERVED.</div>
+    <div class="footer-text">© <span id="curYear"></span> HU SHAN. ALL RIGHTS RESERVED.</div>
 
-    <!-- Registro -->
+    <!-- Registro 页面 -->
     <div id="historyPage">
         <div class="v-nav">
-            <div class="back-arrow" onclick="closeHistory()">←</div>
+            <div style="font-size:28px; cursor:pointer" onclick="closeHistory()">←</div>
             <h2 style="font-size:18px; font-weight:900; margin:0;">ARCHIVIO INTERVENTI</h2>
             <div style="width:28px"></div>
         </div>
         <div id="logContainer"></div>
-        <div class="v-footer">
-            <button class="footer-btn" style="background:#eee; color:var(--red);" onclick="openConfirm('all')">Svuota Registro</button>
-            <button class="footer-btn" style="background:#000; color:#fff;" onclick="shareLogs()">Esporta Data</button>
-        </div>
-    </div>
-
-    <!-- 弹窗 -->
-    <div id="confirmModal">
-        <div class="modal-content">
-            <h3 id="confirmMsg" style="font-size:16px; line-height:1.4;">Sicuro di voler cancellare?</h3>
-            <div style="display:flex; gap:10px; margin-top:25px;">
-                <button class="footer-btn" style="background:#f2f2f7; color:#000;" onclick="closeConfirm()">ANNULLA</button>
-                <button id="confirmConfirmBtn" class="footer-btn" style="background:var(--red); color:#fff;">ELIMINA</button>
-            </div>
+        <div style="padding:15px; display:flex; gap:10px;">
+            <button style="flex:1; padding:12px; border-radius:10px; border:none; background:#eee; color:var(--red); font-weight:700;" onclick="clearAll()">Svuota Registro</button>
         </div>
     </div>
 
@@ -127,25 +114,19 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let act = {};
-    let logs = JSON.parse(localStorage.getItem('c_logs_v10') || '[]');
-    let dayHistory = JSON.parse(localStorage.getItem('c_days_v10') || '[]');
-    let undoStack = [];
-    
-    // 关键：用于去重，记录已经正式存入 Registro 的任务时间戳
+    // 独立存储 Key
+    let logs = JSON.parse(localStorage.getItem('c_logs_v15') || '[]');
+    let dayHistory = JSON.parse(localStorage.getItem('c_days_v15') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
 
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        act = data;
-
-        // 核心同步逻辑
+        
         Object.keys(data).forEach(id => {
             const item = data[id];
             
-            // 只有当状态为 completed，且原因不是占位符时，才准许进入 Registro
-            if (item.status === 'completed' && item.causale && item.causale !== "IN SCRITTURA...") {
-                
+            // --- 核心修改：只有状态是 completed（B端输完原因点保存后）才写入 Registro ---
+            if (item.status === 'completed') {
                 if (!processedStarts.has(item.startA)) {
                     let startD = item.startD || item.startA;
                     const newEntry = {
@@ -155,58 +136,55 @@
                         tA: Math.round((startD - item.startA) / 60000),
                         tD: Math.round((item.endT - startD) / 60000),
                         st: item.startA, 
-                        c: item.causale, 
+                        c: item.causale || "-", 
                         tech: item.techName || "-"
                     };
                     logs.push(newEntry);
-                    processedStarts.add(item.startA); // 标记已处理
+                    processedStarts.add(item.startA);
                     if (!dayHistory.includes(newEntry.day)) dayHistory.push(newEntry.day);
                     saveState();
-                } else {
-                    // 如果已经记录过了，但云端内容发生修正，同步更新本地
-                    const idx = logs.findIndex(l => l.st === item.startA);
-                    if (idx !== -1 && logs[idx].c !== item.causale) {
-                        logs[idx].c = item.causale;
-                        saveState();
-                    }
                 }
             }
         });
 
-        renderCards();
+        renderCards(data);
         if(document.getElementById('historyPage').style.display === 'flex') renderLogs();
     });
 
     function saveState() {
-        localStorage.setItem('c_logs_v10', JSON.stringify(logs));
-        localStorage.setItem('c_days_v10', JSON.stringify(dayHistory));
+        localStorage.setItem('c_logs_v15', JSON.stringify(logs));
+        localStorage.setItem('c_days_v15', JSON.stringify(dayHistory));
     }
 
-    function renderCards() {
+    function renderCards(act) {
         const list = document.getElementById('activeList'); list.innerHTML = '';
         const today = new Date().toLocaleDateString('it-IT');
-        const entries = Object.keys(act).map(id => ({ id, ...act[id] }));
         
-        entries.sort((a,b) => {
-            const p = { 'red':1, 'orange':2, 'completed':3 };
-            return (p[a.status]||99)-(p[b.status]||99) || b.startA-a.startA;
-        });
-
-        entries.forEach(item => {
+        Object.keys(act).sort((a,b) => (act[a].status === 'red' ? -1 : 1)).forEach(id => {
+            const item = act[id];
             if (new Date(item.startA).toLocaleDateString('it-IT') !== today) return;
-            let stC="", stB="", stCol="", causa="";
+
             let wait = item.startB ? Math.round((item.startB-item.startA)/60000)+"m" : "0m";
             let work = (item.endT && item.startB) ? Math.round((item.endT-item.startB)/60000)+"m" : "0m";
-
-            if(item.status==='orange'){ stC="st-waiting"; stB="CHIAMATA"; stCol="bg-orange"; causa="ATTESA ATTREZZISTA"; }
-            else if(item.status==='red'){ stC="st-working"; stB="RIPARAZIONE"; stCol="bg-red"; causa=item.causale||"IN CORSO..."; }
-            else { stC="st-done"; stB="CONCLUSO"; stCol="bg-green"; causa=item.causale||"CONCLUSO"; }
-
+            
+            // 状态显示映射
+            let statusLabel = "ATTESA";
+            let colorClass = "orange";
+            if(item.status === 'red') { statusLabel = "LAVORO"; colorClass = "red"; }
+            if(item.status === 'finishing' || item.status === 'completed') { statusLabel = "FINE"; colorClass = "green"; }
+            
             const card = document.createElement('div');
-            card.className = `card ${stC}`;
-            card.innerHTML = `<div class="card-top"><div class="card-linea">${item.id}</div><div class="card-badge ${stCol}">${stB}</div></div>
-                <div class="card-causale">${causa}</div>
-                <div class="card-stats">Wait: <b>${wait}</b> | Work: <b>${work}</b><br>Tech: <b>${item.techName||'-'}</b></div>`;
+            card.className = `card st-${item.status}`;
+            card.innerHTML = `
+                <div class="card-top">
+                    <div class="card-linea">${id}</div>
+                    <div class="card-badge bg-${colorClass}">${statusLabel}</div>
+                </div>
+                <div class="card-causale">${item.causale || (item.status === 'orange' ? 'CHIAMATA' : 'IN RIPARAZIONE')}</div>
+                <div class="card-stats">
+                    Wait: <b>${wait}</b> | Work: <b>${work}</b><br>
+                    Tech: <b>${item.techName||'-'}</b>
+                </div>`;
             list.appendChild(card);
         });
     }
@@ -215,23 +193,15 @@
         const container = document.getElementById('logContainer'); container.innerHTML = '';
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
-            const section = document.createElement('div'); section.className = 'day-section';
+            const section = document.createElement('div');
             section.innerHTML = `
-                <div class="day-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <span class="day-del-btn" onclick="openConfirm('day', '${day}')">×</span>
-                    <span>${day}</span>
+                <div class="day-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+                    <span class="day-del-btn" onclick="deleteDay(event, '${day}')">×</span>${day}
                 </div>
                 <div class="day-content">
                     <table>
-                        <thead><tr><th>LINEA</th><th>WAIT</th><th>WORK</th><th>TECH</th><th>CAUSA</th><th><span class="undo-btn" onclick="undo(event)">↺</span></th></tr></thead>
-                        <tbody>${dayLogs.map(l => `<tr onclick="event.stopPropagation()">
-                            <td><b>${l.i}</b></td>
-                            <td style="color:var(--orange)">${l.tA}m</td>
-                            <td style="color:var(--red)">${l.tD}m</td>
-                            <td>${l.tech}</td>
-                            <td>${l.c}</td>
-                            <td class="del-row" onclick="deleteRow(${logs.indexOf(l)})">×</td>
-                        </tr>`).join('')}</tbody>
+                        <thead><tr><th>LINEA</th><th>WAIT</th><th>WORK</th><th>CAUSA</th><th></th></tr></thead>
+                        <tbody>${dayLogs.map(l => `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td><td>${l.c}</td><td class="del-row" onclick="deleteRow(${logs.indexOf(l)})">×</td></tr>`).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
@@ -239,48 +209,29 @@
     }
 
     function deleteRow(idx) { 
-        undoStack.push(JSON.parse(JSON.stringify(logs))); 
         const removed = logs.splice(idx, 1)[0];
         processedStarts.delete(removed.st);
         saveState(); renderLogs(); 
     }
     
-    function openConfirm(type, target) {
-        const modal = document.getElementById('confirmModal');
-        const msg = document.getElementById('confirmMsg');
-        const btn = document.getElementById('confirmConfirmBtn');
-        modal.style.display = 'flex';
-        if(type === 'day') {
-            msg.innerText = "Vuoi cancellare tutti i dati del giorno " + target + "?";
-            btn.onclick = () => { 
-                undoStack.push(JSON.parse(JSON.stringify(logs)));
-                logs = logs.filter(l => {
-                    if(l.day === target) processedStarts.delete(l.st);
-                    return l.day !== target;
-                }); 
-                dayHistory = dayHistory.filter(d => d !== target); 
-                saveState(); renderLogs(); closeConfirm(); 
-            };
-        } else {
-            msg.innerText = "Sicuro di voler svuotare l'intero archivio?";
-            btn.onclick = () => { logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs(); closeConfirm(); };
-        }
-        event.stopPropagation();
+    function deleteDay(e, day) {
+        e.stopPropagation();
+        if(!confirm("Cancellare tutto il giorno " + day + "?")) return;
+        logs = logs.filter(l => {
+            if(l.day === day) processedStarts.delete(l.st);
+            return l.day !== day;
+        });
+        dayHistory = dayHistory.filter(d => d !== day);
+        saveState(); renderLogs();
     }
 
-    function undo(e) { 
-        e.stopPropagation(); 
-        if(undoStack.length){ 
-            logs = undoStack.pop(); 
-            dayHistory = [...new Set(logs.map(l=>l.day))]; 
-            processedStarts = new Set(logs.map(l => l.st));
-            saveState(); renderLogs(); 
-        } 
+    function clearAll() {
+        if(!confirm("Svuotare l'intero registro?")) return;
+        logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs();
     }
-    function closeConfirm() { document.getElementById('confirmModal').style.display = 'none'; }
+
     function showHistory() { document.getElementById('historyPage').style.display = 'flex'; renderLogs(); }
     function closeHistory() { document.getElementById('historyPage').style.display = 'none'; }
-    function shareLogs() { /* 导出逻辑 */ }
     document.getElementById('curYear').innerText = new Date().getFullYear();
 </script>
 </body>
