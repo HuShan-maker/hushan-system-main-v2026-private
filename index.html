@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>EssilorLuxottica - B Side (Full)</title>
+    <title>EssilorLuxottica - B Side (Sync Fix)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -189,13 +189,20 @@
     };
     
     let currentUserName = localStorage.getItem('userName') || 'Hu_Shan';
+    
+    // --- 颜色修复逻辑 ---
     let themeConfig = JSON.parse(localStorage.getItem('pianoThemes') || '{"1":"#000000","2":"#0077b6","3":"#1b5e20","4":"#311b92","5":"#c2185b"}');
+    if(themeConfig["1"] !== "#000000" && themeConfig["1"] !== "black") {
+        themeConfig["1"] = "#000000"; // 强制 Piano 1 回归黑色
+        localStorage.setItem('pianoThemes', JSON.stringify(themeConfig));
+    }
+
     let act = {}; 
     let logs = JSON.parse(localStorage.getItem('logs_v7') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
     let undoStack = [], curPiano = 1, tempLog = null, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
     let isInitialLoad = true; 
-    let currentActiveId = null; // 用于记录当前正在操作的机台ID
+    let currentActiveId = null;
 
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -218,11 +225,11 @@
 
         if (isInitialLoad || (!hasAnyRed && oldestOrangePiano !== 0)) {
             const target = redPiano || oldestOrangePiano || 1;
-            if (target !== curPiano) { curPiano = target; document.body.className = 'p' + target; applyTheme(); }
+            if (target !== curPiano) { curPiano = target; applyTheme(); }
             isInitialLoad = false;
         }
 
-        act = data; 
+        act = data; 
         saveState();
         renderGrid(); 
         updateGlobalBadges(); 
@@ -250,22 +257,13 @@
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) return; 
-        
         if (act[id].status === 'orange') {
             db.ref('active_calls/' + id).update({ status: 'red', startD: now, startB: now });
         } else if (act[id].status === 'red') {
-            // 第一步：状态改为 finishing，C端显示绿卡并显示输入中
             currentActiveId = id;
-            db.ref('active_calls/' + id).update({ 
-                status: 'finishing', 
-                techName: currentUserName, 
-                endT: now,
-                causale: "IN SCRITTURA..." 
-            });
-
+            db.ref('active_calls/' + id).update({ status: 'finishing', techName: currentUserName, endT: now, causale: "IN SCRITTURA..." });
             let startD = act[id].startD || act[id].startA;
             tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - act[id].startA) / 60000), tD: Math.round((now - startD) / 60000), st: act[id].startA };
-            
             delete act[id]; 
             saveState(); 
             renderGrid(); 
@@ -276,13 +274,14 @@
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const allOrangeIds = Object.keys(act).filter(key => act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
+        const c = themeConfig[curPiano];
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
             const b = document.createElement('button'); const s = act[i];
             b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : s.status === 'orange' ? 'waiting' : '') : 'gr');
             b.innerText = i; 
             if (s && (s.status === 'red' || s.status === 'orange')) b.style.color = "#ffffff"; 
-            else b.style.color = themeConfig[curPiano];
+            else b.style.color = c;
             b.onclick = () => handleMachineClick(i); wrap.appendChild(b);
             if (s && s.status === 'orange') {
                 const qNum = allOrangeIds.indexOf(i) + 1;
@@ -292,7 +291,7 @@
         });
         const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
         f.className = 'fuori-btn ' + (fs ? (fs.status === 'red' ? 'or' : 'waiting') : '');
-        if (!fs) f.style.color = themeConfig[curPiano];
+        if (!fs) f.style.color = c;
     }
 
     function switchPiano(p, dir='left') { 
@@ -306,10 +305,13 @@
         const c=themeConfig[curPiano]; 
         document.body.className = 'p' + curPiano;
         document.querySelectorAll('.p-btn').forEach((b,i)=>{ 
-            b.style.backgroundColor=(i+1===curPiano)?c:'#f2f2f7'; 
-            b.classList.toggle('active',i+1===curPiano); 
+            const isTarget = (i+1 === curPiano);
+            b.style.backgroundColor = isTarget ? c : '#f2f2f7'; 
+            b.style.color = isTarget ? '#fff' : '#8e8e93';
+            b.classList.toggle('active', isTarget); 
         }); 
-        document.getElementById('floorColor').value=c; renderGrid(); 
+        document.getElementById('floorColor').value = c; 
+        renderGrid(); 
     }
     
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
@@ -321,15 +323,7 @@
         tempLog.c = val; 
         logs.push(tempLog);
         if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day);
-        
-        // 第二步：正式改为 completed，触发 C 端真正的结单记录
-        if (currentActiveId) {
-            db.ref('active_calls/' + currentActiveId).update({ 
-                status: 'completed',
-                causale: val 
-            });
-        }
-
+        if (currentActiveId) { db.ref('active_calls/' + currentActiveId).update({ status: 'completed', causale: val }); }
         saveState(); 
         document.getElementById('modal').style.display='none'; 
         renderGrid(); 
@@ -401,9 +395,8 @@
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
-    document.getElementById('userNameDisp').innerText = currentUserName;
-    document.getElementById('regNameDisp').innerText = currentUserName;
-    document.getElementById('curYear').innerText = new Date().getFullYear();
+    function showCallAlert(id) { document.getElementById('alertLinea').innerText = id; document.getElementById('callAlert').style.display = 'flex'; new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{}); }
+    function closeAlert() { document.getElementById('callAlert').style.display = 'none'; }
 
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
     document.addEventListener('touchend', e=>{ 
@@ -413,6 +406,13 @@
             else if(d<0 && curPiano<5) switchPiano(curPiano+1,'left'); 
         } 
     });
+
+    document.getElementById('userNameDisp').innerText = currentUserName;
+    document.getElementById('regNameDisp').innerText = currentUserName;
+    document.getElementById('curYear').innerText = new Date().getFullYear();
+    
+    // 初始化皮肤
+    applyTheme();
 </script>
 </body>
 </html>
