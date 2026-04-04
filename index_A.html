@@ -20,23 +20,21 @@
             padding: env(safe-area-inset-top) 25px env(safe-area-inset-bottom) 25px;
         }
 
-        .header { padding: 30px 0 20px 0; text-align: center; width: 100%; }
-        h1 { font-size: 22px; font-weight: 900; margin: 0; text-transform: uppercase; }
+        .header { padding: 25px 0 15px 0; text-align: center; width: 100%; }
+        h1 { font-size: 20px; font-weight: 900; margin: 0; text-transform: uppercase; }
 
-        /* --- 输入框容器优化 --- */
         .input-box { 
             width: 100%; 
             display: flex;
             justify-content: center;
-            margin-bottom: 25px; 
+            margin-bottom: 20px; 
         }
         input { 
-            /* 修改点：不再占满全屏，限制宽度为 200px */
-            width: 200px; 
-            padding: 15px; 
-            border-radius: 18px; 
+            width: 180px; 
+            padding: 12px; 
+            border-radius: 16px; 
             border: 2px solid #eee; 
-            font-size: 28px; 
+            font-size: 26px; 
             font-weight: 800; 
             text-align: center; 
             outline: none; 
@@ -44,12 +42,16 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
 
+        /* 主按钮：紧凑尺寸 */
         .main-btn {
-            width: 100%; max-width: 340px; height: 480px; 
-            border-radius: 40px; display: flex;
+            width: 100%; 
+            max-width: 280px; 
+            height: 380px;    
+            border-radius: 35px; 
+            display: flex;
             flex-direction: column; align-items: center; justify-content: center;
             transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: none;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.05);
         }
 
         .status-none { background: #fff; border: 4px solid var(--gray); color: #000; }
@@ -58,15 +60,16 @@
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-        .btn-icon { font-size: 70px; margin-bottom: 20px; }
-        .btn-text { font-size: 20px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 20px; line-height: 1.3; }
+        .btn-icon { font-size: 60px; margin-bottom: 15px; }
+        .btn-text { font-size: 18px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 20px; line-height: 1.2; }
         
+        /* 底部版权样式：字体颜色已加深为纯黑 */
         .footer-text { 
             margin-top: auto; 
-            padding: 20px 0; 
+            padding: 15px 0; 
             font-size: 12px; 
             font-weight: 800; 
-            color: #8e8e93; 
+            color: #000000; /* 这里的颜色改为深黑色 */
             text-transform: uppercase; 
             letter-spacing: 0.8px; 
         }
@@ -100,6 +103,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // 动态年份
     document.getElementById('year').innerText = new Date().getFullYear();
 
     const validLines = [];
