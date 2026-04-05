@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side v17.0</title>
+    <title>EssilorLuxottica - B Side v18.5</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -27,6 +27,20 @@
             margin: 0; transition: background 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
         
+        /* 呼叫全屏报警 */
+        #callAlert { 
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: var(--orange); z-index: 2147483647; flex-direction: column; 
+            align-items: center; justify-content: center; color: white; text-align: center;
+        }
+        #callAlert h1 { font-size: 80px; margin: 10px 0; font-weight: 900; }
+        #callAlert p { font-size: 24px; font-weight: 700; text-transform: uppercase; }
+        #callAlert button { 
+            margin-top: 40px; padding: 25px 80px; border-radius: 25px; border: none; 
+            background: white; color: var(--orange); font-size: 28px; font-weight: 900; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2); cursor: pointer;
+        }
+
         .h { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; }
         h2 { margin: 0; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.1; }
         .user-subtitle { font-size: 14px; color: #8e8e93; font-weight: 600; margin-top: 5px; height: 25px; display: flex; align-items: center; cursor: pointer; min-width: 50px; }
@@ -68,12 +82,14 @@
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
+        /* Modals */
         #modal, #confirmModal, #editModal, #nameModal, #dayConfirmModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
         .modal-content h3 { font-size: 14px; white-space: nowrap; margin-bottom: 20px; }
         .modal-content input { width: 90%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 12px; font-size: 18px; text-align: center; background: #f9f9f9; outline: none; -webkit-user-select: text; user-select: text; }
         .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; }
         
+        /* Registro View */
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 8px 20px 0 20px; flex-shrink: 0; background: #fff; border-bottom: 1px solid #f2f2f7; z-index: 200; }
         .back-arrow { font-size: 28px; width: 45px; cursor: pointer; display: flex; align-items: center; height: 100%; }
@@ -111,6 +127,12 @@
     </style>
 </head>
 <body class="p1">
+
+    <div id="callAlert">
+        <p>⚠️ NUOVA CHIAMATA</p>
+        <h1 id="alertLinea">---</h1>
+        <button onclick="closeAlert()">RICEVUTO</button>
+    </div>
 
     <div class="h">
         <div class="title-group"><h2>OPERATORE</h2><div id="userNameDisp" class="user-subtitle" onclick="handleNameClick()">Hu_Shan</div></div>
@@ -203,6 +225,7 @@
             if (item.status === 'orange' && !knownCalls.has(item.startA)) {
                 if(!isInitialLoad) {
                     sendBark(id);
+                    showCallAlert(id);
                 }
                 knownCalls.add(item.startA);
             }
@@ -322,12 +345,12 @@
         const val = document.getElementById('causaleInput').value.trim() || "-";
         tempLog.c = val; 
         
-        // 1. 本地保存
+        // 1. 本地保存 ( Registro )
         logs.push(tempLog);
         if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day);
         saveState();
 
-        // 2. 数据库历史节点保存 (为 C 端永久保留)
+        // 2. 【核心修改】推送到永久历史节点 ( 云端备份 )
         if (currentActiveId) {
             db.ref('history_logs').push({
                 linea: currentActiveId,
@@ -341,7 +364,7 @@
                 ts: Date.now()
             });
 
-            // 3. 删除活跃呼叫 (触发 A 端复位)
+            // 3. 删除活跃呼叫 (触发 A 端复位变白)
             db.ref('active_calls/' + currentActiveId).remove();
         }
 
@@ -415,6 +438,9 @@
         });
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
+
+    function showCallAlert(id) { document.getElementById('alertLinea').innerText = id; document.getElementById('callAlert').style.display = 'flex'; }
+    function closeAlert() { document.getElementById('callAlert').style.display = 'none'; }
 
     // --- Swiping ---
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
