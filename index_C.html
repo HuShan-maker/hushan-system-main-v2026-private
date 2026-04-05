@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Board Control Professional v17.0</title>
+    <title>C - Board Control Today v18.7</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -59,7 +59,6 @@
         .bg-red { background: var(--red); }
         .bg-black { background: var(--black); }
 
-        /* Archivio Page */
         #historyPage { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 500; flex-direction: column; padding-top: env(safe-area-inset-top); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 0 20px; border-bottom: 1px solid #f2f2f7; flex-shrink: 0; }
         
@@ -97,7 +96,6 @@
     </div>
 
 <script>
-    // --- Firebase Init ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -108,42 +106,44 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- Data Management ---
     let logs = JSON.parse(localStorage.getItem('c_local_v89') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('c_days_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
     let lastDeleted = null;
 
-    // 定时器：每分钟刷新一次首页列表，确保“保留24小时”逻辑实时更新
+    // 定时器：每分钟刷新一次首页列表，确保跨天时自动消失
     setInterval(() => renderCombinedCards(), 60000);
 
     db.ref('active_calls').on('value', (snapshot) => {
         cloudData = snapshot.val() || {};
+        let needsSave = false;
+
         Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
-            // 只有当 B 端传回 'completed' 且带有 endT 结束时间时才归档
-            if (item.status === 'completed' && item.endT && !processedStarts.has(item.startA)) {
+            if (item.status === 'completed' && !processedStarts.has(item.startA)) {
                 let startD = item.startD || item.startA;
                 const newEntry = {
                     i: id, 
                     day: new Date(item.startA).toLocaleDateString('it-IT'),
                     s: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
                     tA: Math.round((startD - item.startA) / 60000),
-                    tD: Math.round((item.endT - startD) / 60000),
-                    st: item.startA,      // 呼叫开始时间戳
-                    et: item.endT,        // 维修结束时间戳
+                    tD: Math.round(((item.endT || Date.now()) - startD) / 60000),
+                    st: item.startA,      
+                    et: item.endT || Date.now(), 
                     c: item.causale || "-", 
                     tech: item.techName || "-"
                 };
                 logs.push(newEntry);
                 processedStarts.add(item.startA);
                 if (!dayHistory.includes(newEntry.day)) dayHistory.push(newEntry.day);
-                saveState();
-                // 归档后从 Firebase 活跃任务中移除，保持云端干净
+                needsSave = true;
+                
                 db.ref('active_calls/' + id).remove();
             }
         });
+
+        if(needsSave) saveState();
         renderCombinedCards();
         if(document.getElementById('historyPage').style.display === 'flex') renderLogs();
     });
@@ -153,35 +153,31 @@
         localStorage.setItem('c_days_v89', JSON.stringify(dayHistory));
     }
 
-    // --- UI Rendering ---
     function renderCombinedCards() {
         const list = document.getElementById('activeList'); 
         list.innerHTML = '';
         
-        const now = Date.now();
-        const oneDayMs = 24 * 60 * 60 * 1000;
+        // 获取今天的日期字符串 (it-IT 格式: dd/mm/yyyy)
+        const todayStr = new Date().toLocaleDateString('it-IT');
 
-        // 首页显示的本地记录：结束时间在24小时内，且没被手动隐藏
+        // 核心修改：只过滤出日期等于今天的本地记录
         const localToDisplay = logs.filter(l => {
-            const endTime = l.et || l.st;
-            const isRecent = (now - endTime) < oneDayMs;
-            return isRecent && !l.hideFromBoard;
+            return l.day === todayStr && !l.hideFromBoard;
         }).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, 
             causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true,
-            sortTime: l.et || l.st // 已完成的按结束时间排序
+            sortTime: l.et || l.st
         }));
 
-        // 活跃的云端记录
         const cloudItems = Object.keys(cloudData).map(id => {
             const item = cloudData[id];
             return { 
                 id: id, ...item, isLocal: false, 
-                sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA) 
+                sortTime: (item.status === 'orange' ? item.startA : (item.startB || item.startA)) 
             };
         });
 
-        // 合并并排序：最后变动（维修中或刚修完）的在最上面
+        // 排序逻辑：最后变动的在最上面
         const all = [...localToDisplay, ...cloudItems].sort((a, b) => b.sortTime - a.sortTime);
 
         all.forEach(item => {
@@ -200,7 +196,6 @@
             const card = document.createElement('div');
             card.className = `card st-${statusKey}`;
             
-            // 允许删除/隐藏已完成或正在写记录的任务
             let showDel = (item.status === 'completed' || item.status === 'finishing');
             let delBtn = showDel ? `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA})">×</div>` : '';
 
@@ -248,7 +243,6 @@
         renderLogs();
     }
 
-    // --- Archivio / Logs Logic ---
     function renderLogs() {
         const container = document.getElementById('logContainer'); 
         container.innerHTML = '';
