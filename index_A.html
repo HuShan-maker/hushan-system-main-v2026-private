@@ -174,12 +174,11 @@
                     statusText.innerText = "IN ATTESA";
                     btnIcon.innerText = "⏳";
                     break;
-                case 'red':
-                case 'finishing': // B端正在输入原因的状态也要保持锁定
-                    mainBtn.className = "main-btn status-red locked";
-                    statusText.innerText = "RIPARAZIONE IN CORSO...";
-                    btnIcon.innerText = "🛠";
-                    break;
+                    case 'red':
+    mainBtn.className = "main-btn status-red locked";
+    statusText.innerText = "INTERVENTO IN CORSO..."; 
+    btnIcon.innerText = "⚙️"; // 或者保留 🛠，⚙️(齿轮)更像调机
+    break;
                 default:
                     setInitialUI();
             }
