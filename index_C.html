@@ -173,7 +173,8 @@
         }).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, 
             causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true,
-            sortTime: l.et || l.st
+            sortTime: l.et || l.st,
+            startTimeStr: l.s // 使用已存的开始时间字符串
         }));
 
         // 活跃的云端记录
@@ -181,7 +182,8 @@
             const item = cloudData[id];
             return { 
                 id: id, ...item, isLocal: false, 
-                sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA) 
+                sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA),
+                startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
             };
         });
 
@@ -207,6 +209,7 @@
             let showDel = (item.status === 'completed');
             let delBtn = showDel ? `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA})">×</div>` : '';
 
+            // 修改点：加入了 INIZIO: <b>${item.startTimeStr}</b>
             card.innerHTML = `${delBtn}
                 <div class="card-left">
                     <div class="card-linea">${item.id}</div>
@@ -214,7 +217,11 @@
                 </div>
                 <div class="card-right">
                     <div class="card-badge bg-${colorClass}">${statusLabel}</div>
-                    <div class="card-stats">A: <b>${wait}</b> | D: <b>${work}</b><br>Operatore: <b>${item.techName||'-'}</b></div>
+                    <div class="card-stats">
+                        Inizio: <b>${item.startTimeStr}</b><br>
+                        A: <b>${wait}</b> | D: <b>${work}</b><br>
+                        Operatore: <b>${item.techName||'-'}</b>
+                    </div>
                 </div>`;
             list.appendChild(card);
         });
