@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side (Full Logic) v18.9</title>
+    <title>B - Technician Side (Full Logic) v18.9.1</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -25,20 +25,6 @@
             font-family: -apple-system, sans-serif; background: var(--bg); color: #000; 
             padding: calc(15px + env(safe-area-inset-top)) 20px 20px 20px; 
             margin: 0; transition: background 0.4s; overflow-x: hidden; touch-action: pan-y; 
-        }
-        
-        /* 页面报警弹窗逻辑保留 */
-        #callAlert { 
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: var(--orange); z-index: 2147483647; flex-direction: column; 
-            align-items: center; justify-content: center; color: white; text-align: center;
-        }
-        #callAlert h1 { font-size: 80px; margin: 10px 0; font-weight: 900; }
-        #callAlert p { font-size: 24px; font-weight: 700; text-transform: uppercase; }
-        #callAlert button { 
-            margin-top: 40px; padding: 25px 80px; border-radius: 25px; border: none; 
-            background: white; color: var(--orange); font-size: 28px; font-weight: 900; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2); cursor: pointer;
         }
 
         .h { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; }
@@ -126,12 +112,6 @@
 </head>
 <body class="p1">
 
-    <div id="callAlert">
-        <p>⚠️ NUOVA CHIAMATA</p>
-        <h1 id="alertLinea">---</h1>
-        <button onclick="closeAlert()">RICEVUTO</button>
-    </div>
-
     <div class="h">
         <div class="title-group"><h2>OPERATORE</h2><div id="userNameDisp" class="user-subtitle" onclick="handleNameClick()">Hu_Shan</div></div>
         <button class="reg-btn" onclick="showMemoria()">registro</button>
@@ -153,6 +133,24 @@
     <div id="editModal"><div class="modal-content"><h3>Modifica</h3><input type="text" id="editCausaleInput" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
     <div id="confirmModal"><div class="modal-content"><h3>Svuota tutto il registro?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('confirmModal').style.display='none'">NO</button><button style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;" onclick="doClear()">SI</button></div></div></div>
     <div id="dayConfirmModal"><div class="modal-content"><h3>vuoi cancellare tutti i dati del giorno?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('dayConfirmModal').style.display='none'">NO</button><button id="confirmDayDelBtn" style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;">SI</button></div></div></div>
+
+    <!-- Registro View -->
+    <div id="v">
+        <div class="v-nav">
+            <div class="back-arrow" onclick="closeMemoria()">←</div>
+            <h2 class="v-h2">REGISTRO INTERVENTI</h2>
+            <div id="regNameDisp" class="v-user-tag">Hu_Shan</div>
+        </div>
+        <div id="logContainer"></div>
+        <div class="v-footer">
+            <div class="btn-group">
+                <button class="bottom-action-btn clear-btn" onclick="openConfirm()">Svuota tutto</button>
+                <button class="bottom-action-btn export-btn" onclick="shareRegistro()">INVIO REGISTRO</button>
+            </div>
+            <div class="v-edit-hint">doppio tocco per modificare la causale， x per cancellare</div>
+            <div class="copy-text">© <span id="curYear"></span> Hu Shan. All rights reserved.</div>
+        </div>
+    </div>
 
 <script>
     const firebaseConfig = {
@@ -201,7 +199,7 @@
             if (item.status === 'orange' && !knownCalls.has(item.startA)) {
                 if(!isInitialLoad) {
                     sendBark(id);
-                    showCallAlert(id);
+                    // 【已删除 showCallAlert】
                 }
                 knownCalls.add(item.startA);
             }
@@ -272,7 +270,7 @@
 
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
-        const allOrangeIds = Object.keys(act).filter(key => act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
+        const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
         const c = themeConfig[curPiano];
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
@@ -322,18 +320,14 @@
         logs.push(tempLog);
         if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day);
         saveState();
-
         if (currentActiveId) {
-            // 【修正交接逻辑】发完成信号给 C 端归档
             db.ref('active_calls/' + currentActiveId).update({
                 status: 'completed',
                 causale: val,
                 endT: Date.now(),
                 techName: currentUserName
             });
-            // 这里不再直接 remove，由 C 端存好本地后再 remove
         }
-
         document.getElementById('modal').style.display='none'; 
         renderGrid(); 
     }
@@ -404,9 +398,6 @@
         });
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
-
-    function showCallAlert(id) { document.getElementById('alertLinea').innerText = id; document.getElementById('callAlert').style.display = 'flex'; }
-    function closeAlert() { document.getElementById('callAlert').style.display = 'none'; }
 
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
     document.addEventListener('touchend', e=>{ 
