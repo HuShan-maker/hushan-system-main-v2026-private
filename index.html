@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.7</title>
+    <title>B - Technician Side Full v18.9.8</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -246,8 +246,10 @@
             gd.appendChild(wrap);
         });
         const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
-        f.className = 'fuori-btn ' + (fs ? (fs.status === 'red' ? 'or' : 'waiting') : '');
-        if (!fs) f.style.color = c;
+        // 修改：显式判断状态，如果不在进行中则恢复灰色
+        const isFuoriActive = fs && (fs.status === 'red' || fs.status === 'orange' || fs.status === 'finishing');
+        f.className = 'fuori-btn ' + (isFuoriActive ? 'or' : '');
+        if (!isFuoriActive) f.style.color = c;
     }
 
     function switchPiano(p, dir='left') { 
@@ -279,12 +281,17 @@
         if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day);
         saveState();
         if (currentActiveId) {
-            db.ref('active_calls/' + currentActiveId).update({
-                status: 'completed',
-                causale: val,
-                endT: Date.now(),
-                techName: currentUserName
-            });
+            // 【修正点】当是 FUORI 时，B 端直接完成并清理，不等待 C 端
+            if (currentActiveId === 'FUORI') {
+                db.ref('active_calls/FUORI').remove();
+            } else {
+                db.ref('active_calls/' + currentActiveId).update({
+                    status: 'completed',
+                    causale: val,
+                    endT: Date.now(),
+                    techName: currentUserName
+                });
+            }
         }
         document.getElementById('modal').style.display='none'; 
         renderGrid(); 
@@ -330,28 +337,27 @@
     function performUndo(e) { e.stopPropagation(); if(undoStack.length){ let last=undoStack.pop(); logs=last.l; dayHistory=last.h; saveState(); renderLogs(); } }
     function deleteRow(index) { undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs.splice(index,1); saveState(); renderLogs(); }
     function openDayDelConfirm(e, day) { e.stopPropagation(); document.getElementById('dayConfirmModal').style.display='flex'; document.getElementById('confirmDayDelBtn').onclick=()=>{ undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs=logs.filter(l=>l.day!==day); dayHistory=dayHistory.filter(d=>d!==day); saveState(); document.getElementById('dayConfirmModal').style.display='none'; renderLogs(); }; }
-    function handleNameClick() { nameClickCount++; if(nameClickCount === 1) { nameClickTimer = setTimeout(() => { nameCount = 0; }, 350); } else { clearTimeout(nameClickTimer); nameClickCount = 0; document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; setTimeout(() => document.getElementById('nameInput').focus(), 150); } }
+    function handleNameClick() { nameClickCount++; if(nameClickCount === 1) { nameClickTimer = setTimeout(() => { nameClickCount = 0; }, 350); } else { clearTimeout(nameClickTimer); nameClickCount = 0; document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; setTimeout(() => document.getElementById('nameInput').focus(), 150); } }
     function saveName() { let n=document.getElementById('nameInput').value.trim(); if(n){ currentUserName = n; localStorage.setItem('userName',n); document.getElementById('userNameDisp').innerText=n; document.getElementById('regNameDisp').innerText=n; } document.getElementById('nameModal').style.display='none'; }
     function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
     function closeMemoria() { document.getElementById('v').style.display='none'; }
     
-    // --- FUORI LINEA 专用逻辑修改 ---
+    // --- FUORI LINEA 专用逻辑修复 ---
     function toggleFuori() { 
         const now = Date.now();
         // 如果正在进行中，则执行正常的点击逻辑（弹出 Causale 弹窗）
-        if(act['FUORI']) {
+        if(act['FUORI'] && (act['FUORI'].status === 'red' || act['FUORI'].status === 'orange')) {
             handleMachineClick('FUORI');
         } else {
             // 如果没开启，则直接进入红色状态（跳过橙色）
             db.ref('active_calls/FUORI').set({
                 status: 'red',
-                startA: now, // 此时 A 和 B 时间一致，因为是主动开启
+                startA: now, 
                 startB: now,
                 startD: now
             });
         }
     }
-    // ----------------------------
 
     async function shareRegistro() {
         if (logs.length === 0) return;
@@ -371,10 +377,13 @@
     document.addEventListener('touchend', e=>{ 
         let d=e.changedTouches[0].screenX-touchStartX; 
         if(Math.abs(d)>70 && document.getElementById('v').style.display!=='flex'){ 
-            if(d>0 && curPiano>1) switchPiano(curPiano-1,'right'); 
-            else if(d<0 && curPiano<5) switchPiano(curPiano+1,'left'); 
+            if(d>0 && curPano>1) switchPiano(curPano-1,'right'); 
+            else if(d<0 && curPano<5) switchPiano(curPano+1,'left'); 
         } 
     });
+
+    function openConfirm() { document.getElementById('confirmModal').style.display='flex'; }
+    function doClear() { logs=[]; dayHistory=[]; saveState(); renderLogs(); document.getElementById('confirmModal').style.display='none'; }
 
     document.getElementById('userNameDisp').innerText = currentUserName;
     document.getElementById('regNameDisp').innerText = currentUserName;
