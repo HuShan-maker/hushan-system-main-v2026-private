@@ -5,43 +5,45 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Board Control Persistent v8.6</title>
+    <title>C - Board Control Final v8.8</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        :root { --bg: #f2f2f7; --red: #ff3b30; --orange: #ff9500; --green: #34c759; --white: #ffffff; --text-main: #1c1c1e; --text-sec: #8e8e93; }
+        :root { --bg: #f2f2f7; --red: #ff3b30; --orange: #ff9500; --black: #000000; --white: #ffffff; --text-main: #1c1c1e; --text-sec: #8e8e93; }
         * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
         
         body { 
             font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; 
-            padding: env(safe-area-inset-top) 15px 20px 15px;
+            padding: env(safe-area-inset-top) 0 20px 0;
             display: flex; flex-direction: column; height: 100vh;
         }
 
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 5px; flex-shrink: 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-shrink: 0; }
         h1 { font-size: 22px; font-weight: 900; margin: 0; letter-spacing: -1px; }
         .reg-btn { background: #000; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; cursor: pointer; }
 
         #activeList { 
             flex: 1; overflow-y: auto; display: flex; flex-direction: column;
-            gap: 12px; padding: 10px 0;
+            gap: 12px; padding: 10px 0; align-items: center; /* 居中对齐 */
         }
 
         .card { 
             background: var(--white); border-radius: 18px; padding: 12px 16px;
             display: flex; align-items: center; justify-content: space-between;
-            width: 100%; min-height: 85px;
+            /* 宽度调整：窄一点点 */
+            width: 94%; max-width: 450px; 
+            min-height: 85px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 2.5px solid transparent;
             position: relative;
         }
         
+        /* 状态边框逻辑 */
         .card.st-waiting { border-color: var(--orange); }
         .card.st-working { border-color: var(--red); }
-        .card.st-completed { border-color: var(--green); background: #fafffa; }
+        .card.st-completed { border-color: var(--black); }
 
-        /* 缩小版红色删除按钮 */
         .card-del {
             position: absolute; top: -6px; right: -6px; 
             width: 22px; height: 22px; background: var(--red); 
@@ -53,19 +55,19 @@
 
         .card-left { display: flex; flex-direction: column; gap: 4px; flex: 1; }
         .card-linea { font-size: 20px; font-weight: 900; color: var(--text-main); }
-        .card-causale { font-size: 15px; font-weight: 800; color: #000; text-transform: uppercase; }
+        .card-causale { font-size: 14px; font-weight: 800; color: #000; text-transform: uppercase; }
 
         .card-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-        .card-badge { font-size: 9px; font-weight: 900; padding: 4px 8px; border-radius: 8px; text-transform: uppercase; color: #fff; }
+        .card-badge { font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; color: #fff; }
         
         .card-stats { font-size: 10px; font-weight: 600; color: var(--text-sec); line-height: 1.3; }
         .card-stats b { color: #333; }
 
         .bg-orange { background: var(--orange); }
         .bg-red { background: var(--red); }
-        .bg-green { background: var(--green); }
+        .bg-black { background: var(--black); }
 
-        /* Archivio 页面 */
+        /* 历史记录 */
         #historyPage { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 500; flex-direction: column; padding-top: env(safe-area-inset-top); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 0 20px; border-bottom: 1px solid #f2f2f7; }
         #logContainer { flex: 1; overflow-y: auto; padding: 15px; }
@@ -73,7 +75,6 @@
         
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { padding: 10px 2px; text-align: center; font-size: 11px; border-bottom: 1px solid #f2f2f7; }
-        th { color: #8e8e93; font-size: 9px; text-transform: uppercase; }
         .del-row { color: var(--red); font-weight: 900; cursor: pointer; font-size: 18px; }
 
         .footer-text { text-align: center; padding: 15px 0; font-size: 10px; font-weight: 900; color: #000; text-transform: uppercase; letter-spacing: 1px; }
@@ -111,9 +112,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 本地存储 Key 升级
-    let logs = JSON.parse(localStorage.getItem('c_local_v86') || '[]');
-    let dayHistory = JSON.parse(localStorage.getItem('c_days_v86') || '[]');
+    let logs = JSON.parse(localStorage.getItem('c_local_v88') || '[]');
+    let dayHistory = JSON.parse(localStorage.getItem('c_days_v88') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
 
@@ -122,8 +122,6 @@
         
         Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
-            
-            // 核心修复逻辑：B端完成后，存入本地 logs 并从云端物理删除
             if (item.status === 'completed' && !processedStarts.has(item.startA)) {
                 let startD = item.startD || item.startA;
                 const newEntry = {
@@ -140,8 +138,6 @@
                 processedStarts.add(item.startA);
                 if (!dayHistory.includes(newEntry.day)) dayHistory.push(newEntry.day);
                 saveState();
-                
-                // 转存本地后删除云端，保证刷新后数据不再从 Firebase 重新拉取
                 db.ref('active_calls/' + id).remove();
             }
         });
@@ -151,19 +147,15 @@
     });
 
     function saveState() {
-        localStorage.setItem('c_local_v86', JSON.stringify(logs));
-        localStorage.setItem('c_days_v86', JSON.stringify(dayHistory));
+        localStorage.setItem('c_local_v88', JSON.stringify(logs));
+        localStorage.setItem('c_days_v88', JSON.stringify(dayHistory));
     }
 
-    // 处理卡片删除按钮
     function handleManualDel(id, st) {
-        if(!confirm("Eliminare questa scheda?")) return;
-        
-        // 如果是云端正在进行的，从云端删
+        if(!confirm("Eliminare?")) return;
         if(cloudData[id] && cloudData[id].startA === st) {
             db.ref('active_calls/' + id).remove();
         } else {
-            // 如果是已完成的，在本地标记为隐藏，不再渲染到主页，但保留在 Archivio
             const idx = logs.findIndex(l => l.st === st);
             if(idx !== -1) {
                 logs[idx].hideFromBoard = true;
@@ -177,33 +169,35 @@
         const list = document.getElementById('activeList'); list.innerHTML = '';
         const today = new Date().toLocaleDateString('it-IT');
 
-        // 1. 获取本地今日已结转且未手动隐藏的记录
         const localToday = logs.filter(l => l.day === today && !l.hideFromBoard).map(l => ({
             id: l.i, status: 'completed', startA: l.st, 
             causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true
         }));
 
-        // 2. 获取云端当前活动的记录
         const cloudItems = Object.keys(cloudData).map(id => ({
             id: id, ...cloudData[id], isLocal: false
         }));
 
-        // 3. 混合排序：最新的 startA 始终在最上方
-        const allItems = [...localToday, ...cloudItems].sort((a, b) => (b.startA || 0) - (a.startA || 0));
+        const all = [...localToday, ...cloudItems].sort((a, b) => b.startA - a.startA);
 
-        allItems.forEach(item => {
-            let waitTime = item.isLocal ? item.tA + "m" : (item.startB ? Math.round((item.startB-item.startA)/60000)+"m" : "0m");
-            let workTime = item.isLocal ? item.tD + "m" : ((item.endT && item.startB) ? Math.round((item.endT-item.startB)/60000)+"m" : "0m");
+        all.forEach(item => {
+            let wait = item.isLocal ? item.tA + "m" : (item.startB ? Math.round((item.startB-item.startA)/60000)+"m" : "0m");
+            let work = item.isLocal ? item.tD + "m" : ((item.endT && item.startB) ? Math.round((item.endT-item.startB)/60000)+"m" : "0m");
             
-            let statusLabel = item.status === 'orange' ? 'ATTESA' : (item.status === 'red' ? 'LAVORO' : 'FINE');
-            let colorClass = item.status === 'orange' ? 'orange' : (item.status === 'red' ? 'red' : 'green');
+            let statusLabel, colorClass;
+            if(item.status === 'orange') {
+                statusLabel = 'ATTESA'; colorClass = 'orange';
+            } else if(item.status === 'red' || item.status === 'finishing') {
+                statusLabel = 'LAVORO'; colorClass = 'red';
+            } else {
+                statusLabel = 'FINE'; colorClass = 'black';
+            }
             
             const card = document.createElement('div');
-            card.className = `card st-${item.status === 'completed' ? 'completed' : item.status}`;
+            card.className = `card st-${item.status === 'completed' ? 'completed' : (item.status === 'orange' ? 'waiting' : 'working')}`;
             
-            // 已完成、正在输入(finishing)显示删除按钮
-            let canDelete = (item.status === 'completed' || item.status === 'finishing');
-            let delBtn = canDelete ? `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA})">×</div>` : '';
+            let showDel = (item.status === 'completed' || item.status === 'finishing');
+            let delBtn = showDel ? `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA})">×</div>` : '';
 
             card.innerHTML = `
                 ${delBtn}
@@ -214,7 +208,7 @@
                 <div class="card-right">
                     <div class="card-badge bg-${colorClass}">${statusLabel}</div>
                     <div class="card-stats">
-                        A: <b>${waitTime}</b> | D: <b>${workTime}</b><br>
+                        A: <b>${wait}</b> | D: <b>${work}</b><br>
                         Operatore: <b>${item.techName||'-'}</b>
                     </div>
                 </div>`;
@@ -256,14 +250,14 @@
     
     function deleteDay(e, day) {
         e.stopPropagation();
-        if(!confirm("Eliminare definitivamente record del " + day + "?")) return;
+        if(!confirm("Eliminare i record di questo giorno?")) return;
         logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; });
         dayHistory = dayHistory.filter(d => d !== day);
         saveState(); renderLogs(); renderCombinedCards();
     }
 
     function clearAll() {
-        if(!confirm("Cancellare tutta la memoria locale?")) return;
+        if(!confirm("Svuotare tutto?")) return;
         logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs(); renderCombinedCards();
     }
 
