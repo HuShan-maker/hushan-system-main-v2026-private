@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>EssilorLuxottica - B Side v15.8</title>
+    <title>B - Technicians (Bark Only) v16.0</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -26,26 +26,14 @@
             padding: calc(15px + env(safe-area-inset-top)) 20px 20px 20px; 
             margin: 0; transition: background 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
-        
-        /* 呼叫全屏报警 */
-        #callAlert { 
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: var(--orange); z-index: 2147483647; flex-direction: column; 
-            align-items: center; justify-content: center; color: white; text-align: center;
-        }
-        #callAlert h1 { font-size: 80px; margin: 10px 0; font-weight: 900; }
-        #callAlert p { font-size: 24px; font-weight: 700; text-transform: uppercase; }
-        #callAlert button { 
-            margin-top: 40px; padding: 25px 80px; border-radius: 25px; border: none; 
-            background: white; color: var(--orange); font-size: 28px; font-weight: 900; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2); cursor: pointer;
-        }
 
+        /* 顶部导航 */
         .h { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; }
         h2 { margin: 0; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.1; }
         .user-subtitle { font-size: 14px; color: #8e8e93; font-weight: 600; margin-top: 5px; height: 25px; display: flex; align-items: center; cursor: pointer; min-width: 50px; }
         .reg-btn { background: #000; color: #fff; font-size: 11px; border: none; padding: 0 14px; border-radius: 9px; font-weight: 700; text-transform: uppercase; height: 25px; display: flex; align-items: center; }
         
+        /* 楼层按钮 */
         .pianos { display: flex; gap: 5px; margin-bottom: 25px; padding: 12px 0 8px 0; overflow: visible; }
         .p-btn { 
             flex: 1; background: var(--btn-gray); 
@@ -63,6 +51,7 @@
         }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
+        /* 机器网格 */
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
         .slide-right { transform: translateX(30px); opacity: 0; }
@@ -82,12 +71,14 @@
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
+        /* 弹窗通用样式 */
         #modal, #confirmModal, #editModal, #nameModal, #dayConfirmModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
         .modal-content h3 { font-size: 14px; white-space: nowrap; margin-bottom: 20px; }
         .modal-content input { width: 90%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 12px; font-size: 18px; text-align: center; background: #f9f9f9; outline: none; -webkit-user-select: text; user-select: text; }
         .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; }
         
+        /* 历史记录视图 */
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 8px 20px 0 20px; flex-shrink: 0; background: #fff; border-bottom: 1px solid #f2f2f7; z-index: 200; }
         .back-arrow { font-size: 28px; width: 45px; cursor: pointer; display: flex; align-items: center; height: 100%; }
@@ -126,11 +117,7 @@
 </head>
 <body class="p1">
 
-    <div id="callAlert">
-        <p>⚠️ NUOVA CHIAMATA</p>
-        <h1 id="alertLinea">---</h1>
-        <button onclick="closeAlert()">RICEVUTO</button>
-    </div>
+    <!-- 移除了 #callAlert 橙色全屏弹窗 -->
 
     <div class="h">
         <div class="title-group"><h2>OPERATORE</h2><div id="userNameDisp" class="user-subtitle" onclick="handleNameClick()">Hu_Shan</div></div>
@@ -147,12 +134,14 @@
     <div class="bottom-area"><button id="btn-fuori" class="fuori-btn" onclick="toggleFuori()">FUORI LINEA</button></div>
     <div class="color-picker-wrap" id="pickerContainer"><input type="color" id="floorColor" onchange="updateThemeColor(this.value)"></div>
 
+    <!-- Modals -->
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
     <div id="modal"><div class="modal-content"><h3>Causale</h3><input type="text" id="causaleInput" placeholder="Inserire causale..." autocomplete="off"><button class="modal-btn" onclick="saveCausale()">SALVA</button></div></div>
     <div id="editModal"><div class="modal-content"><h3>Modifica</h3><input type="text" id="editCausaleInput" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
     <div id="confirmModal"><div class="modal-content"><h3>Svuota tutto il registro?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('confirmModal').style.display='none'">NO</button><button style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;" onclick="doClear()">SI</button></div></div></div>
     <div id="dayConfirmModal"><div class="modal-content"><h3>vuoi cancellare tutti i dati del giorno?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('dayConfirmModal').style.display='none'">NO</button><button id="confirmDayDelBtn" style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;">SI</button></div></div></div>
 
+    <!-- Registro View -->
     <div id="v">
         <div class="v-nav">
             <div class="back-arrow" onclick="closeMemoria()">←</div>
@@ -216,12 +205,12 @@
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         
+        // 只保留 Bark 推送，移除了 showCallAlert
         Object.keys(data).forEach(id => {
             const item = data[id];
             if (item.status === 'orange' && !knownCalls.has(item.startA)) {
                 if(!isInitialLoad) {
                     sendBark(id);
-                    showCallAlert(id);
                 }
                 knownCalls.add(item.startA);
             }
@@ -267,7 +256,6 @@
                 Object.keys(data).forEach(id => {
                     if (data[id].status === 'orange' && !knownCalls.has(data[id].startA)) {
                         sendBark(id);
-                        showCallAlert(id);
                         knownCalls.add(data[id].startA);
                     }
                 });
@@ -430,8 +418,7 @@
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
-    function showCallAlert(id) { document.getElementById('alertLinea').innerText = id; document.getElementById('callAlert').style.display = 'flex'; new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{}); }
-    function closeAlert() { document.getElementById('alertLinea').innerText = id; document.getElementById('callAlert').style.display = 'none'; }
+    // 移除了 showCallAlert 和 closeAlert 函数
 
     // --- Swiping ---
     document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
