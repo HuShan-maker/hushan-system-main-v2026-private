@@ -2,8 +2,8 @@
 <html>
 <head>
     <meta charset="UTF-8">
-        <!-- 自定义主屏幕图标：黑色背景 + 白色 A -->
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-size='60' font-weight='900' fill='white'>A</text></svg>">
+    <!-- 终极转义版图标：解决 iOS 不显示字母和底色的问题 -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='black'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='sans-serif' font-size='60' font-weight='900' fill='white'%3EA%3C/text%3E%3C/svg%3E">
 
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -88,7 +88,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Bark 通知配置
     const BARK_TOKEN = "t3WWfkPgH4KVC8axqhWBLR";
 
     document.getElementById('year').innerText = new Date().getFullYear();
@@ -116,16 +115,12 @@
         localStorage.setItem('myLinea', id);
         currentId = id;
         
-        // 1. 写入 Firebase
         db.ref('active_calls/' + id).set({
             startA: Date.now(),
             status: 'orange'
         }).then(() => {
-            // 2. 发送 Bark 推送通知
             const title = encodeURIComponent("⚠️ CHIAMATA LINEA " + id.toUpperCase());
             const body = encodeURIComponent("Richiesta assistenza!");
-            
-            // 【已修改】sound 参数已设为 glass
             const barkUrl = `https://api.day.app/${BARK_TOKEN}/${title}/${body}?sound=glass&level=critical&group=Luxottica&isArchive=1`;
             
             fetch(barkUrl, { mode: 'no-cors', keepalive: true })
