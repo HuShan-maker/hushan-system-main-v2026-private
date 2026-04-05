@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Controllo Linee Professional v18.9.15</title>
+    <title>C - Controllo Linee Professional v18.9.16</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -26,11 +26,10 @@
 
         #activeList { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 10px 20px; align-items: center; }
 
-        /* 修改卡片高度和基础布局 */
         .card { 
-            background: var(--white); border-radius: 20px; padding: 12px 20px;
-            display: flex; align-items: flex-end; /* 内容底部对齐，给左上角标签留空间 */
-            width: 100%; max-width: 650px; min-height: 90px; /* 缩小高度 */
+            background: var(--white); border-radius: 20px; padding: 15px 25px;
+            display: flex; align-items: center; 
+            width: 100%; max-width: 650px; min-height: 95px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 2.5px solid transparent;
             position: relative; transition: 0.3s;
         }
@@ -47,36 +46,30 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
-        /* 状态字移到左上角 */
+        /* 左侧：状态和机台号上下居中 */
+        .card-left { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 110px; justify-content: center; align-items: flex-start; }
         .card-badge { 
-            position: absolute; top: 10px; left: 10px;
             font-size: 11px; font-weight: 900; 
             padding: 4px 10px; 
             border-radius: 8px; 
             text-transform: uppercase; 
             color: #fff; 
-            text-align: center;
             letter-spacing: 0.5px;
         }
+        .card-linea { font-size: 26px; font-weight: 900; color: var(--text-main); line-height: 1; }
 
-        /* 下移 Linea 和 Causale */
-        .card-left { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 100px; padding-top: 15px; }
-        .card-linea { font-size: 22px; font-weight: 900; color: var(--text-main); }
-        .card-causale { font-size: 14px; font-weight: 700; color: #333; text-transform: uppercase; }
-
-        /* 统计信息 */
-        .card-center { flex: 1.5; padding-left: 10px; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
-        .card-stats { font-size: 13px; font-weight: 600; color: var(--text-sec); line-height: 1.3; }
+        /* 中间：统计数据 */
+        .card-center { flex: 1.5; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; justify-content: center; }
+        .card-stats { font-size: 14px; font-weight: 600; color: var(--text-sec); line-height: 1.4; }
         .card-stats b { color: #000; font-weight: 800; }
 
-        /* 右侧留空或微调 */
         .card-right { width: 10px; flex-shrink: 0; }
 
         .bg-orange { background: var(--orange); }
         .bg-red { background: var(--red); }
         .bg-black { background: var(--black); }
 
-        /* Archivio 保持不变 */
+        /* Archivio 逻辑部分 - 严禁删除 */
         #historyPage { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 500; flex-direction: column; padding-top: env(safe-area-inset-top); }
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 0 20px; border-bottom: 1px solid #f2f2f7; flex-shrink: 0; }
         #logContainer { flex: 1; overflow-y: auto; padding: 15px; }
@@ -204,10 +197,9 @@
             let delBtn = (item.status === 'completed') ? `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA})">×</div>` : '';
 
             card.innerHTML = `${delBtn}
-                <div class="card-badge bg-${colorClass}">${statusLabel}</div>
                 <div class="card-left">
+                    <div class="card-badge bg-${colorClass}">${statusLabel}</div>
                     <div class="card-linea">${item.id}</div>
-                    <div class="card-causale">${item.causale || (item.status === 'orange' ? 'CHIAMATA' : 'IN CORSO')}</div>
                 </div>
                 <div class="card-center">
                     <div class="card-stats">
