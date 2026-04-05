@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.6</title>
+    <title>B - Technician Side Full v18.9.7</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -176,9 +176,6 @@
 
     db.ref('active_calls').on('value', (snapshot) => {
         const data = snapshot.val() || {};
-        
-        // --- 此处已删除 Bark 发送逻辑 (交由 A 端处理) ---
-
         if (isInitialLoad) {
             let redP = 0, orangeP = 0, oldest = Infinity;
             for(let p=1; p<=5; p++) {
@@ -193,7 +190,6 @@
             curPiano = redP || orangeP || 1;
             isInitialLoad = false;
         }
-
         act = data; 
         saveState();
         renderGrid(); 
@@ -334,13 +330,28 @@
     function performUndo(e) { e.stopPropagation(); if(undoStack.length){ let last=undoStack.pop(); logs=last.l; dayHistory=last.h; saveState(); renderLogs(); } }
     function deleteRow(index) { undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs.splice(index,1); saveState(); renderLogs(); }
     function openDayDelConfirm(e, day) { e.stopPropagation(); document.getElementById('dayConfirmModal').style.display='flex'; document.getElementById('confirmDayDelBtn').onclick=()=>{ undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs=logs.filter(l=>l.day!==day); dayHistory=dayHistory.filter(d=>d!==day); saveState(); document.getElementById('dayConfirmModal').style.display='none'; renderLogs(); }; }
-    function handleNameClick() { nameClickCount++; if(nameClickCount === 1) { nameClickTimer = setTimeout(() => { nameClickCount = 0; }, 350); } else { clearTimeout(nameClickTimer); nameClickCount = 0; document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; setTimeout(() => document.getElementById('nameInput').focus(), 150); } }
+    function handleNameClick() { nameClickCount++; if(nameClickCount === 1) { nameClickTimer = setTimeout(() => { nameCount = 0; }, 350); } else { clearTimeout(nameClickTimer); nameClickCount = 0; document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; setTimeout(() => document.getElementById('nameInput').focus(), 150); } }
     function saveName() { let n=document.getElementById('nameInput').value.trim(); if(n){ currentUserName = n; localStorage.setItem('userName',n); document.getElementById('userNameDisp').innerText=n; document.getElementById('regNameDisp').innerText=n; } document.getElementById('nameModal').style.display='none'; }
     function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
     function closeMemoria() { document.getElementById('v').style.display='none'; }
-    function toggleFuori() { handleMachineClick('FUORI'); }
-    function doClear() { logs=[]; dayHistory=[]; saveState(); renderLogs(); document.getElementById('confirmModal').style.display='none'; }
-    function openConfirm() { document.getElementById('confirmModal').style.display='flex'; }
+    
+    // --- FUORI LINEA 专用逻辑修改 ---
+    function toggleFuori() { 
+        const now = Date.now();
+        // 如果正在进行中，则执行正常的点击逻辑（弹出 Causale 弹窗）
+        if(act['FUORI']) {
+            handleMachineClick('FUORI');
+        } else {
+            // 如果没开启，则直接进入红色状态（跳过橙色）
+            db.ref('active_calls/FUORI').set({
+                status: 'red',
+                startA: now, // 此时 A 和 B 时间一致，因为是主动开启
+                startB: now,
+                startD: now
+            });
+        }
+    }
+    // ----------------------------
 
     async function shareRegistro() {
         if (logs.length === 0) return;
