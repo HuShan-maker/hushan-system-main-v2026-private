@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Board Control Professional v18.9</title>
+    <title>C - Board Control Professional v18.9.10</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -24,13 +24,13 @@
         h1 { font-size: 22px; font-weight: 900; margin: 0; letter-spacing: -1px; }
         .reg-btn { background: #000; color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; cursor: pointer; }
 
-        #activeList { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 10px 0; align-items: center; }
+        #activeList { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 10px 20px; align-items: center; }
 
         .card { 
-            background: var(--white); border-radius: 18px; padding: 12px 16px;
-            display: flex; align-items: center; justify-content: space-between;
-            width: 94%; max-width: 450px; min-height: 85px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05); border: 2.5px solid transparent;
+            background: var(--white); border-radius: 20px; padding: 16px 20px;
+            display: flex; align-items: flex-start; justify-content: space-between;
+            width: 100%; max-width: 500px; min-height: 100px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2.5px solid transparent;
             position: relative; transition: 0.3s;
         }
         .card.st-waiting { border-color: var(--orange); }
@@ -38,22 +38,26 @@
         .card.st-completed { border-color: var(--black); }
 
         .card-del {
-            position: absolute; top: -6px; right: -6px; 
-            width: 22px; height: 22px; background: var(--red); 
-            color: white; border-radius: 50%; border: 2px solid white;
+            position: absolute; top: -8px; right: -8px; 
+            width: 26px; height: 26px; background: var(--red); 
+            color: white; border-radius: 50%; border: 2.5px solid white;
             display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: 900; cursor: pointer; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 20;
+            font-size: 16px; font-weight: 900; cursor: pointer; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 20;
         }
 
-        .card-left { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-        .card-linea { font-size: 20px; font-weight: 900; color: var(--text-main); }
-        .card-causale { font-size: 14px; font-weight: 800; color: #000; text-transform: uppercase; }
+        /* 左侧布局：Linea 和下面的 Causale */
+        .card-left { display: flex; flex-direction: column; gap: 8px; flex: 1.5; }
+        .card-linea { font-size: 24px; font-weight: 900; color: var(--text-main); line-height: 1; }
+        .card-causale { font-size: 16px; font-weight: 700; color: #333; text-transform: uppercase; }
 
-        .card-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-        .card-badge { font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; color: #fff; }
-        .card-stats { font-size: 10px; font-weight: 600; color: var(--text-sec); line-height: 1.3; }
-        .card-stats b { color: #333; }
+        /* 右侧布局：状态和放大的信息 */
+        .card-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 1; }
+        .card-badge { font-size: 10px; font-weight: 900; padding: 4px 12px; border-radius: 10px; text-transform: uppercase; color: #fff; margin-bottom: 2px; }
+        
+        /* 放大右侧文字内容 */
+        .card-stats { font-size: 13px; font-weight: 600; color: var(--text-sec); line-height: 1.5; }
+        .card-stats b { color: #000; font-weight: 800; }
 
         .bg-orange { background: var(--orange); }
         .bg-red { background: var(--red); }
@@ -99,7 +103,6 @@
     </div>
 
 <script>
-    // --- Firebase Init ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -110,14 +113,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- Data Management ---
     let logs = JSON.parse(localStorage.getItem('c_local_v89') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('c_days_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
     let lastDeleted = null;
 
-    // 定时刷新首页（跨天自动消失逻辑）
     setInterval(() => renderCombinedCards(), 60000);
 
     db.ref('active_calls').on('value', (snapshot) => {
@@ -126,7 +127,6 @@
 
         Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
-            // 拦截 B 端发送的 completed 信号
             if (item.status === 'completed' && !processedStarts.has(item.startA)) {
                 let startD = item.startD || item.startA;
                 const newEntry = {
@@ -144,8 +144,6 @@
                 processedStarts.add(item.startA);
                 if (!dayHistory.includes(newEntry.day)) dayHistory.push(newEntry.day);
                 needsSave = true;
-                
-                // 存入本地后，由 C 端清理云端，达成闭环
                 db.ref('active_calls/' + id).remove();
             }
         });
@@ -160,24 +158,17 @@
         localStorage.setItem('c_days_v89', JSON.stringify(dayHistory));
     }
 
-    // --- UI Rendering ---
     function renderCombinedCards() {
         const list = document.getElementById('activeList'); 
         list.innerHTML = '';
-        
         const todayStr = new Date().toLocaleDateString('it-IT');
 
-        // 首页显示今天的本地已完成记录
-        const localToDisplay = logs.filter(l => {
-            return l.day === todayStr && !l.hideFromBoard;
-        }).map(l => ({
+        const localToDisplay = logs.filter(l => l.day === todayStr && !l.hideFromBoard).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, 
             causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true,
-            sortTime: l.et || l.st,
-            startTimeStr: l.s // 使用已存的开始时间字符串
+            sortTime: l.et || l.st, startTimeStr: l.s
         }));
 
-        // 活跃的云端记录
         const cloudItems = Object.keys(cloudData).map(id => {
             const item = cloudData[id];
             return { 
@@ -187,7 +178,6 @@
             };
         });
 
-        // 排序：最新变动的置顶
         const all = [...localToDisplay, ...cloudItems].sort((a, b) => b.sortTime - a.sortTime);
 
         all.forEach(item => {
@@ -205,11 +195,8 @@
             
             const card = document.createElement('div');
             card.className = `card st-${statusKey}`;
-            
-            let showDel = (item.status === 'completed');
-            let delBtn = showDel ? `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA})">×</div>` : '';
+            let delBtn = (item.status === 'completed') ? `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA})">×</div>` : '';
 
-            // 修改点：加入了 INIZIO: <b>${item.startTimeStr}</b>
             card.innerHTML = `${delBtn}
                 <div class="card-left">
                     <div class="card-linea">${item.id}</div>
@@ -220,7 +207,7 @@
                     <div class="card-stats">
                         Inizio: <b>${item.startTimeStr}</b><br>
                         A: <b>${wait}</b> | D: <b>${work}</b><br>
-                        Operatore: <b>${item.techName||'-'}</b>
+                        Tech: <b>${item.techName||'-'}</b>
                     </div>
                 </div>`;
             list.appendChild(card);
@@ -228,17 +215,15 @@
     }
 
     function handleManualDel(id, st) {
-        if(!confirm("Nascondere dalla bacheca?")) return;
+        if(!confirm("Nascondere?")) return;
         const idx = logs.findIndex(l => l.st === st);
         if(idx !== -1) {
             lastDeleted = { type: 'hide', index: idx, data: {...logs[idx]} };
             logs[idx].hideFromBoard = true;
-            saveState();
-            renderCombinedCards();
+            saveState(); renderCombinedCards();
         }
     }
 
-    // --- Archivio / Logs Logic ---
     function renderLogs() {
         const container = document.getElementById('logContainer'); 
         container.innerHTML = '';
@@ -251,26 +236,11 @@
                 </div>
                 <div class="day-content">
                     <table>
-                        <thead>
-                            <tr>
-                                <th style="width:15%">LINEA</th>
-                                <th style="width:10%">A</th>
-                                <th style="width:10%">D</th>
-                                <th style="width:35%">CAUSA</th>
-                                <th style="width:20%">OPERATORE</th>
-                                <th style="width:10%"><span class="undo-head" onclick="undoAction(event)">↺</span></th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>LINEA</th><th>A</th><th>D</th><th>CAUSA</th><th>TECH</th><th><span class="undo-head" onclick="undoAction(event)">↺</span></th></tr></thead>
                         <tbody>${dayLogs.map(l => {
                             const idx = logs.indexOf(l);
-                            return `<tr>
-                                <td><b>${l.i}</b></td>
-                                <td>${l.tA}m</td>
-                                <td>${l.tD}m</td>
-                                <td style="font-size:9px">${l.c}</td>
-                                <td>${l.tech}</td>
-                                <td class="del-row" onclick="deleteRow(${idx})">×</td>
-                            </tr>`}).join('')}</tbody>
+                            return `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td><td style="font-size:9px">${l.c}</td><td>${l.tech}</td><td class="del-row" onclick="deleteRow(${idx})">×</td></tr>`
+                        }).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
@@ -280,15 +250,13 @@
     function undoAction(e) {
         if(e) e.stopPropagation();
         if(!lastDeleted) return;
-        if(lastDeleted.type === 'hide') {
-            logs[lastDeleted.index].hideFromBoard = false;
-        } else if(lastDeleted.type === 'delete') {
+        if(lastDeleted.type === 'hide') logs[lastDeleted.index].hideFromBoard = false;
+        else if(lastDeleted.type === 'delete') {
             logs.splice(lastDeleted.index, 0, lastDeleted.data);
             processedStarts.add(lastDeleted.data.st);
-            if(!dayHistory.includes(lastDeleted.data.day)) dayHistory.push(lastDeleted.data.day);
+            if (!dayHistory.includes(lastDeleted.data.day)) dayHistory.push(lastDeleted.data.day);
         }
-        lastDeleted = null;
-        saveState(); renderCombinedCards(); renderLogs();
+        lastDeleted = null; saveState(); renderCombinedCards(); renderLogs();
     }
 
     function deleteRow(idx) { 
@@ -300,14 +268,14 @@
     
     function deleteDay(e, day) {
         e.stopPropagation();
-        if(!confirm("Eliminare record del " + day + "?")) return;
+        if(!confirm("Eliminare giorno?")) return;
         logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; });
         dayHistory = dayHistory.filter(d => d !== day);
         saveState(); renderLogs(); renderCombinedCards();
     }
 
     function clearAll() {
-        if(!confirm("Svuotare tutto l'archivio locale?")) return;
+        if(!confirm("Svuotare tutto?")) return;
         logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs(); renderCombinedCards();
     }
 
