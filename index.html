@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luxottica Service Portal</title>
+    <style>
+        :root { --blue: #007aff; --red: #ff3b30; --black: #1c1c1e; --gray: #8e8e93; }
+        body { font-family: -apple-system, sans-serif; background: #f2f2f7; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        
+        .header { text-align: center; margin-bottom: 30px; }
+        h1 { font-size: 26px; font-weight: 900; margin: 0; color: var(--black); }
+        p { color: var(--gray); font-size: 14px; margin-top: 5px; }
+
+        .menu { width: 90%; max-width: 350px; display: flex; flex-direction: column; gap: 15px; }
+        
+        /* 选项基础样式 */
+        .option {
+            background: #fff; border-radius: 20px; padding: 20px;
+            text-decoration: none; display: flex; align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: transform 0.2s, background 0.2s;
+            border: 2px solid transparent;
+        }
+        .option:active { transform: scale(0.97); background: #f9f9f9; }
+
+        .icon { font-size: 32px; margin-right: 20px; width: 50px; text-align: center; }
+        .text-group { display: flex; flex-direction: column; }
+        .title { font-size: 18px; font-weight: 800; color: var(--black); }
+        .desc { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+        /* 针对不同角色的颜色引导 */
+        .opt-a { border-left: 6px solid var(--blue); }
+        .opt-b { border-left: 6px solid var(--red); }
+        .opt-c { border-left: 6px solid var(--black); }
+
+        .footer { margin-top: 40px; font-size: 11px; color: var(--gray); font-weight: 600; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>SISTEMA SERVICE</h1>
+        <p>Seleziona il tuo profilo aziendale</p>
+    </div>
+
+    <div class="menu">
+        <!-- A端：生产线工人 -->
+        <a href="index_A.html" class="option opt-a">
+            <div class="icon">📱</div>
+            <div class="text-group">
+                <span class="title">LATO A: PRODUZIONE</span>
+                <span class="desc">Per chi lavora in linea e chiama il tecnico.</span>
+            </div>
+        </a>
+
+        <!-- B端：维修技术员 -->
+        <a href="index_B.html" class="option opt-b">
+            <div class="icon">🛠️</div>
+            <div class="text-group">
+                <span class="title">LATO B: TECNICI</span>
+                <span class="desc">Per attrezzisti che gestiscono gli interventi.</span>
+            </div>
+        </a>
+
+        <!-- C端：工头/看板 -->
+        <a href="index_C.html" class="option opt-c">
+            <div class="icon">📊</div>
+            <div class="text-group">
+                <span class="title">LATO C: CAPI TURNO</span>
+                <span class="desc">Monitoraggio real-time e statistiche.</span>
+            </div>
+        </a>
+    </div>
+
+    <div class="footer">Luxottica App v2026 - Hu Shan</div>
+
+</body>
+</html>
