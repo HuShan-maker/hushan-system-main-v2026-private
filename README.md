@@ -12,7 +12,7 @@ Puoi accedere a tutte le funzioni dal portale principale:
 
 *   📱 **Lato A (Operatore):** 
     Riservato alla produzione. Un tasto rapido per chiamare l'assistenza senza allontanarsi dalla linea.
-*   🛠️ **Lato B (Tecnico):** 
+*   🛠️ **Lato B (Attrezzisti):** 
     Il centro operativo per gli attrezzisti. Riceve notifiche immediate, gestisce gli interventi e crea un registro automatico.
 *   🖥️ **Lato C (Board):** 
     Una dashboard dedicata ai **Capi turno**. Mostra in tempo reale lo stato di tutte le linee (ATTESA/LAVORO/FINE).
