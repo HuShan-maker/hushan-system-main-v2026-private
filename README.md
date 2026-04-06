@@ -26,7 +26,7 @@ Puoi accedere a tutte le funzioni dal portale principale:
 
 ---
 
-## ⚙️ Istruzioni per l'Installazione
+## ⚙️ Collegamento rapido 
 Per un'esperienza ottimale, aggiungi l'app alla tua schermata Home:
 1.  Apri il link desiderato su **Safari** (iPhone) o **Chrome** (Android).
 2.  Clicca l'icona **Condividi** (quadrato con freccia) o i **tre puntini** in alto a destra.
