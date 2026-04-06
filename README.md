@@ -19,7 +19,7 @@ Puoi accedere a tutte le funzioni dal portale principale:
 
 ---
 
-## 🛡️ Sicurezza e Privacy (IMPORTANTE)
+## 🛡️ Sicurezza e Privacy (Info)
 *   **Nessun dato personale:** L'app è una Progressive Web App (PWA) basata su browser. **Non ha accesso** a rubrica, foto, messaggi, microfono o posizione GPS.
 *   **Dati raccolti:** Vengono registrati solo il numero della linea, l'orario di intervento, la durata e il nome del tecnico.
 *   **Senza Installazione:** Non è necessario scaricare nulla dagli store ufficiali (App Store/Play Store), garantendo la massima trasparenza.
