@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.8</title>
+    <title>B - Technician Side Full v18.9.9</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -51,7 +51,6 @@
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
-        /* 别人抢单后的灰色样式 */
         .locked-btn { background: var(--locked-gray) !important; color: #8e8e93 !important; opacity: 0.5; pointer-events: none; }
         
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
@@ -227,16 +226,14 @@
         const now = Date.now();
         if (!act[id]) return; 
         
-        // 情况 A：橙色状态（有人呼叫），点击“抢单”
         if (act[id].status === 'orange') {
             db.ref('active_calls/' + id).update({ 
                 status: 'red', 
                 startD: now, 
                 startB: now,
-                takenBy: myDeviceId // 标记抢单者设备
+                takenBy: myDeviceId 
             });
         } 
-        // 情况 B：红色状态（正在维修），只有抢单者可以点
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
             currentActiveId = id;
             db.ref('active_calls/' + id).update({ status: 'finishing', techName: currentUserName, endT: now, causale: "IN SCRITTURA..." });
@@ -255,7 +252,6 @@
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
             const b = document.createElement('button'); const s = act[i];
             
-            // 基础样式逻辑
             b.className = 'btn-machine';
             b.innerText = i;
             
@@ -266,12 +262,10 @@
                     b.disabled = false;
                 } else if (s.status === 'red') {
                     if (s.takenBy === myDeviceId) {
-                        // 我抢到的单子：红色亮起
                         b.classList.add('or');
                         b.style.color = "#ffffff";
                         b.disabled = false;
                     } else {
-                        // 别人抢到的单子：灰色锁定
                         b.classList.add('locked-btn');
                         b.disabled = true;
                     }
@@ -289,7 +283,6 @@
             gd.appendChild(wrap);
         });
 
-        // FUORI LINEA 逻辑同步应用设备锁
         const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
         if (fs && fs.status === 'red') {
             if (fs.takenBy === myDeviceId) {
@@ -405,7 +398,7 @@
                 startA: now, 
                 startB: now,
                 startD: now,
-                takenBy: myDeviceId // FUORI LINEA 同样应用锁定
+                takenBy: myDeviceId
             });
         }
     }
@@ -413,7 +406,6 @@
     async function shareRegistro() {
         if (logs.length === 0) return;
         const expandedDays = Array.from(document.querySelectorAll('.day-section:not(.collapsed) span')).map(el => el.innerText);
-        const w = { linea: 12, inizio: 10, attesa: 10, durata: 10 };
         let shareText = `REGISTRO - ${currentUserName}\n------------------\n`;
         const groups = {}; dayHistory.forEach(d => groups[d] = []);
         logs.forEach(l => { if (groups[l.day]) groups[l.day].push(l); });
@@ -424,14 +416,19 @@
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
-    document.addEventListener('touchstart', e=>{ touchStartX=e.changedTouches[0].screenX; });
-    document.addEventListener('touchend', e=>{ 
-        let d=e.changedTouches[0].screenX-touchStartX; 
-        if(Math.abs(d)>70 && document.getElementById('v').style.display!=='flex'){ 
-            if(d>0 && curPano>1) switchPiano(curPano-1,'right'); 
-            else if(d<0 && curPano<5) switchPiano(curPano+1,'left'); 
+    // --- 修复后的左右滑动逻辑 ---
+    document.addEventListener('touchstart', e => { 
+        touchStartX = e.changedTouches[0].screenX; 
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => { 
+        if (document.getElementById('v').style.display === 'flex') return;
+        let deltaX = e.changedTouches[0].screenX - touchStartX; 
+        if (Math.abs(deltaX) > 70) { 
+            if (deltaX > 0 && curPiano > 1) switchPiano(curPiano - 1, 'right'); 
+            else if (deltaX < 0 && curPiano < 5) switchPiano(curPiano + 1, 'left'); 
         } 
-    });
+    }, { passive: true });
 
     function openConfirm() { document.getElementById('confirmModal').style.display='flex'; }
     function doClear() { logs=[]; dayHistory=[]; saveState(); renderLogs(); document.getElementById('confirmModal').style.display='none'; }
