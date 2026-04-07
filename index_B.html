@@ -11,7 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        :root { --bg: #ffffff; --card: #e5e5ea; --red: #ff3b30; --orange: #ff9500; --btn-gray: #f2f2f7; }
+        :root { --bg: #ffffff; --card: #e5e5ea; --red: #ff3b30; --orange: #ff9500; --btn-gray: #f2f2f7; --locked-gray: #d1d1d6; }
         * { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         
         body { 
@@ -47,10 +47,13 @@
         .slide-right { transform: translateX(30px); opacity: 0; }
         
         .btn-wrap { position: relative; width: 100%; aspect-ratio: 1/1; }
-        .btn-machine { width: 100%; height: 100%; border: none; border-radius: 24px; font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: background 0.3s; }
+        .btn-machine { width: 100%; height: 100%; border: none; border-radius: 24px; font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: all 0.3s; }
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
+        /* 别人抢单后的灰色样式 */
+        .locked-btn { background: var(--locked-gray) !important; color: #8e8e93 !important; opacity: 0.5; pointer-events: none; }
+        
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
         @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
         @keyframes pulseOrange { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.96); opacity: 0.7; } }
@@ -156,6 +159,12 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // --- 设备身份标识 ---
+    if (!localStorage.getItem('deviceId')) {
+        localStorage.setItem('deviceId', 'dev_' + Math.random().toString(36).substr(2, 9));
+    }
+    const myDeviceId = localStorage.getItem('deviceId');
+
     const pianoData = { 
         1: ['101','101bis','102','102bis','103','103bis','104','104bis','105','105bis','106','106bis','107','107bis','108','108bis'], 
         2: ['201','201bis','202','202bis','203','203bis','204','204bis','205','205bis','206','206bis','207','207bis','208','208bis'], 
@@ -217,9 +226,18 @@
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) return; 
+        
+        // 情况 A：橙色状态（有人呼叫），点击“抢单”
         if (act[id].status === 'orange') {
-            db.ref('active_calls/' + id).update({ status: 'red', startD: now, startB: now });
-        } else if (act[id].status === 'red') {
+            db.ref('active_calls/' + id).update({ 
+                status: 'red', 
+                startD: now, 
+                startB: now,
+                takenBy: myDeviceId // 标记抢单者设备
+            });
+        } 
+        // 情况 B：红色状态（正在维修），只有抢单者可以点
+        else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
             currentActiveId = id;
             db.ref('active_calls/' + id).update({ status: 'finishing', techName: currentUserName, endT: now, causale: "IN SCRITTURA..." });
             let startD = act[id].startD || act[id].startA;
@@ -232,24 +250,60 @@
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
         const c = themeConfig[curPiano];
+        
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
             const b = document.createElement('button'); const s = act[i];
-            b.className = 'btn-machine ' + (s ? (s.status === 'red' ? 'or' : s.status === 'orange' ? 'waiting' : '') : 'gr');
-            b.innerText = i; 
-            b.style.color = (s && (s.status === 'red' || s.status === 'orange')) ? "#ffffff" : c;
+            
+            // 基础样式逻辑
+            b.className = 'btn-machine';
+            b.innerText = i;
+            
+            if (s) {
+                if (s.status === 'orange') {
+                    b.classList.add('waiting');
+                    b.style.color = "#ffffff";
+                    b.disabled = false;
+                } else if (s.status === 'red') {
+                    if (s.takenBy === myDeviceId) {
+                        // 我抢到的单子：红色亮起
+                        b.classList.add('or');
+                        b.style.color = "#ffffff";
+                        b.disabled = false;
+                    } else {
+                        // 别人抢到的单子：灰色锁定
+                        b.classList.add('locked-btn');
+                        b.disabled = true;
+                    }
+                }
+            } else {
+                b.style.color = c;
+            }
+
             b.onclick = () => handleMachineClick(i); wrap.appendChild(b);
+            
             if (s && s.status === 'orange') {
                 const qNum = allOrangeIds.indexOf(i) + 1;
                 const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = qNum; wrap.appendChild(badge);
             }
             gd.appendChild(wrap);
         });
+
+        // FUORI LINEA 逻辑同步应用设备锁
         const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
-        // 修改：显式判断状态，如果不在进行中则恢复灰色
-        const isFuoriActive = fs && (fs.status === 'red' || fs.status === 'orange' || fs.status === 'finishing');
-        f.className = 'fuori-btn ' + (isFuoriActive ? 'or' : '');
-        if (!isFuoriActive) f.style.color = c;
+        if (fs && fs.status === 'red') {
+            if (fs.takenBy === myDeviceId) {
+                f.className = 'fuori-btn or';
+                f.disabled = false;
+            } else {
+                f.className = 'fuori-btn locked-btn';
+                f.disabled = true;
+            }
+        } else {
+            f.className = 'fuori-btn ' + (fs && fs.status === 'orange' ? 'or' : '');
+            f.disabled = false;
+            if (!fs || fs.status === 'completed') f.style.color = c;
+        }
     }
 
     function switchPiano(p, dir='left') { 
@@ -281,7 +335,6 @@
         if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day);
         saveState();
         if (currentActiveId) {
-            // 【修正点】当是 FUORI 时，B 端直接完成并清理，不等待 C 端
             if (currentActiveId === 'FUORI') {
                 db.ref('active_calls/FUORI').remove();
             } else {
@@ -342,19 +395,17 @@
     function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
     function closeMemoria() { document.getElementById('v').style.display='none'; }
     
-    // --- FUORI LINEA 专用逻辑修复 ---
     function toggleFuori() { 
         const now = Date.now();
-        // 如果正在进行中，则执行正常的点击逻辑（弹出 Causale 弹窗）
         if(act['FUORI'] && (act['FUORI'].status === 'red' || act['FUORI'].status === 'orange')) {
             handleMachineClick('FUORI');
         } else {
-            // 如果没开启，则直接进入红色状态（跳过橙色）
             db.ref('active_calls/FUORI').set({
                 status: 'red',
                 startA: now, 
                 startB: now,
-                startD: now
+                startD: now,
+                takenBy: myDeviceId // FUORI LINEA 同样应用锁定
             });
         }
     }
