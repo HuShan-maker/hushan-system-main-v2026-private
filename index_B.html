@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.9</title>
+    <title>B - Technician Side Full v18.9.10</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        :root { --bg: #ffffff; --card: #e5e5ea; --red: #ff3b30; --orange: #ff9500; --btn-gray: #f2f2f7; --locked-gray: #d1d1d6; }
+        :root { --bg: #ffffff; --card: #e5e5ea; --red: #ff3b30; --orange: #ff9500; --btn-gray: #f2f2f7; --locked-blue: #003366; }
         * { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         
         body { 
@@ -51,7 +51,8 @@
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
-        .locked-btn { background: var(--locked-gray) !important; color: #8e8e93 !important; opacity: 0.5; pointer-events: none; }
+        /* 其他B端锁定样式：深蓝色 */
+        .locked-btn { background: var(--locked-blue) !important; color: #ffffff !important; opacity: 0.7; pointer-events: none; }
         
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
         @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
@@ -255,7 +256,8 @@
             b.className = 'btn-machine';
             b.innerText = i;
             
-            if (s) {
+            // 核心逻辑：只有在 orange 或 red 且未完成状态下才应用特殊样式
+            if (s && (s.status === 'orange' || s.status === 'red')) {
                 if (s.status === 'orange') {
                     b.classList.add('waiting');
                     b.style.color = "#ffffff";
@@ -266,12 +268,16 @@
                         b.style.color = "#ffffff";
                         b.disabled = false;
                     } else {
+                        // 锁定状态：深蓝色
                         b.classList.add('locked-btn');
                         b.disabled = true;
                     }
                 }
             } else {
+                // 恢复 Piano 默认颜色（彻底修复维修完变蓝不恢复的问题）
                 b.style.color = c;
+                b.style.backgroundColor = 'var(--btn-gray)';
+                b.disabled = false;
             }
 
             b.onclick = () => handleMachineClick(i); wrap.appendChild(b);
@@ -284,18 +290,24 @@
         });
 
         const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
-        if (fs && fs.status === 'red') {
-            if (fs.takenBy === myDeviceId) {
+        if (fs && (fs.status === 'red' || fs.status === 'orange')) {
+            if (fs.status === 'red') {
+                if (fs.takenBy === myDeviceId) {
+                    f.className = 'fuori-btn or';
+                    f.disabled = false;
+                } else {
+                    f.className = 'fuori-btn locked-btn';
+                    f.disabled = true;
+                }
+            } else {
                 f.className = 'fuori-btn or';
                 f.disabled = false;
-            } else {
-                f.className = 'fuori-btn locked-btn';
-                f.disabled = true;
             }
         } else {
-            f.className = 'fuori-btn ' + (fs && fs.status === 'orange' ? 'or' : '');
+            f.className = 'fuori-btn';
             f.disabled = false;
-            if (!fs || fs.status === 'completed') f.style.color = c;
+            f.style.color = c;
+            f.style.backgroundColor = 'var(--btn-gray)';
         }
     }
 
@@ -396,7 +408,7 @@
             db.ref('active_calls/FUORI').set({
                 status: 'red',
                 startA: now, 
-                startB: now,
+                startB: now, 
                 startD: now,
                 takenBy: myDeviceId
             });
@@ -416,7 +428,6 @@
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
-    // --- 修复后的左右滑动逻辑 ---
     document.addEventListener('touchstart', e => { 
         touchStartX = e.changedTouches[0].screenX; 
     }, { passive: true });
