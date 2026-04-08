@@ -73,20 +73,26 @@
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
+        /* Modals */
+        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
+        .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; }
+        .modal-input { width: 100%; padding: 15px; text-align: center; border-radius: 12px; border: 1px solid #ddd; outline: none; font-size: 16px; margin-bottom: 10px; }
+
         /* 记录页面 - 布局修复 */
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         
         .v-nav { 
             display: flex; 
             align-items: center; 
-            justify-content: center; /* 核心修复：居中标题内容 */
+            justify-content: center; /* 让容器内容居中 */
             height: 55px; 
             padding: 8px 20px 0 20px; 
             flex-shrink: 0; 
             background: #fff; 
             border-bottom: 1px solid #f2f2f7; 
             z-index: 200; 
-            position: relative; 
+            position: relative; /* 为绝对定位的箭头做参考 */
         }
         .back-arrow { 
             font-size: 28px; 
@@ -95,16 +101,17 @@
             display: flex; 
             align-items: center; 
             height: 100%; 
-            position: absolute; 
-            left: 20px; /* 固定在左侧，不挤压标题 */
+            position: absolute; /* 绝对定位，脱离文档流，不挤压标题 */
+            left: 20px; 
+            z-index: 210;
         }
         .v-h2 { 
-            font-size: 14px; /* 字体缩小 */
+            font-size: 14px; /* 稍微缩小标题字体 */
             font-weight: 900; 
             text-transform: uppercase; 
             margin: 0; 
             text-align: center; 
-            flex: 1; 
+            width: 100%; /* 占据整行，确保文字物理居中 */
             pointer-events: none; 
         }
         .v-user-tag { 
@@ -113,8 +120,9 @@
             font-weight: 600; 
             width: 80px; 
             text-align: right; 
-            position: absolute; 
-            right: 20px; /* 固定在右侧 */
+            position: absolute; /* 绝对定位，不挤压标题 */
+            right: 20px;
+            z-index: 210;
         }
         
         #logContainer { flex: 1; overflow-y: auto; padding: 3px 15px 15px 15px; -webkit-overflow-scrolling: touch; }
@@ -145,12 +153,6 @@
         .undo-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--btn-gray); border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #ddd; }
         .del-row { color: var(--red); font-weight: 900; font-size: 20px; text-align: center; width: 30px; cursor: pointer; }
         .editable-causale { color: #000; display: block; min-height: 24px; padding: 8px 0; word-wrap: break-word; white-space: normal; line-height: 1.3; font-size: 12px; }
-
-        /* Modals */
-        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
-        .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; }
-        .modal-input { width: 100%; padding: 15px; text-align: center; border-radius: 12px; border: 1px solid #ddd; outline: none; font-size: 16px; margin-bottom: 10px; }
     </style>
 </head>
 <body class="p1">
@@ -181,8 +183,8 @@
     <!-- Modals -->
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
     
-    <!-- FUORI LINEA 原因输入框 -->
-    <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Cosa hai fatto?"><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
+    <!-- FUORI LINEA 专属输入框 -->
+    <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Attività svolta..."><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
 
     <div id="editModal"><div class="modal-content"><h3>Modifica Causale</h3><input type="text" id="editCausaleInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
     
@@ -219,7 +221,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- 2. 班次逻辑 ---
+    // --- 2. 班次判断与身份注册 ---
     function getRealTimeTurno() {
         const now = new Date();
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -269,7 +271,7 @@
     let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
     let isInitialLoad = true; 
 
-    // --- 4. 实时监听 ---
+    // --- 4. 核心逻辑：Firebase 监听 ---
     db.ref('active_calls').on('value', (snapshot) => {
         act = snapshot.val() || {};
         if (isInitialLoad) {
@@ -296,8 +298,8 @@
         localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
     }
 
-    // --- 5. 归档核心 ---
-    function archiveLog(id, causale, startA, startD, endT) {
+    // --- 5. 归档通用函数 ---
+    function archiveLogEntry(id, causale, startA, startD, endT) {
         const newLog = { 
             i: id, 
             day: new Date().toLocaleDateString('it-IT'), 
@@ -312,24 +314,32 @@
         saveState();
     }
 
+    // --- 6. 核心逻辑：机器点击处理 ---
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) return; 
+        
         if (act[id].status === 'orange') {
-            db.ref('active_calls/' + id).update({ status: 'red', startD: now, startB: now, takenBy: myDeviceId });
+            db.ref('active_calls/' + id).update({ 
+                status: 'red', 
+                startD: now, 
+                startB: now,
+                takenBy: myDeviceId 
+            });
         } 
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
-            // 普通机器直接归档
-            archiveLog(id, act[id].causale || "-", act[id].startA, act[id].startD || act[id].startA, now);
+            // 普通机器点击归档
+            archiveLogEntry(id, act[id].causale || "-", act[id].startA, act[id].startD || act[id].startA, now);
             db.ref('active_calls/' + id).update({ status: 'completed', endT: now });
             renderGrid();
         }
     }
 
+    // --- 7. FUORI LINEA 专属 B端输入逻辑 ---
     function toggleFuori() {
-        const now = Date.now(); const fs = act['FUORI'];
+        const now = Date.now(); 
+        const fs = act['FUORI'];
         if(fs && fs.status === 'red' && fs.takenBy === myDeviceId) {
-            // FUORI 模式结束时弹窗
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
@@ -338,16 +348,16 @@
     }
 
     function saveFuoriCausale() {
-        const val = document.getElementById('fuoriCausaleInput').value.trim() || "Attività B";
+        const val = document.getElementById('fuoriCausaleInput').value.trim() || "Attività Extra";
         const fs = act['FUORI']; const now = Date.now();
-        archiveLog('FUORI', val, fs.startA, fs.startD || fs.startA, now);
+        archiveLogEntry('FUORI', val, fs.startA, fs.startD || fs.startA, now);
         db.ref('active_calls/FUORI').remove();
         document.getElementById('fuoriCausaleInput').value = "";
         document.getElementById('fuoriModal').style.display = 'none';
         renderGrid();
     }
 
-    // --- 6. UI 渲染 ---
+    // --- 8. 核心渲染 ---
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const turnoLabel = document.getElementById('turnoDisp');
@@ -430,7 +440,7 @@
         applyTheme(); 
     }
 
-    // --- 7. 注册表渲染 ---
+    // --- 9. 记录管理渲染 ---
     function renderLogs() {
         const container = document.getElementById('logContainer');
         const expandedDays = new Set();
@@ -466,6 +476,7 @@
         });
     }
 
+    // --- 10. 交互弹窗逻辑 ---
     function handleCausaleClick(index) { 
         clickCount++; 
         if(clickCount===1) clickTimer=setTimeout(()=>clickCount=0,350); 
@@ -512,7 +523,6 @@
         }; 
     }
 
-    // --- 8. 其他辅助 ---
     function handleNameClick() { 
         nameClickCount++; 
         if(nameClickCount === 1) { nameClickTimer = setTimeout(() => { nameClickCount = 0; }, 350); } 
