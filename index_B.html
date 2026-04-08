@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.23</title>
+    <title>B - Technician Side Full v18.9.24</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -44,12 +44,14 @@
         .user-subtitle { font-size: 14px; color: #8e8e93; font-weight: 600; margin-top: 5px; height: 25px; display: flex; align-items: center; cursor: pointer; min-width: 50px; }
         .reg-btn { background: #000; color: #fff; font-size: 11px; border: none; padding: 0 14px; border-radius: 9px; font-weight: 700; text-transform: uppercase; height: 25px; display: flex; align-items: center; }
         
+        /* 钢琴 */
         .pianos { display: flex; gap: 5px; margin-bottom: 25px; padding: 12px 0 8px 0; overflow: visible; }
         .p-btn { flex: 1; background: var(--btn-gray); color: #8e8e93; border: none; padding: 10px 0; border-radius: 12px; font-weight: 700; font-size: 10px; transition: 0.2s; position: relative; }
         .p-btn.active { color: #fff !important; }
         .p-badge { position: absolute; top: -5px; right: -5px; background: var(--red); width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; animation: badgePulse 1.5s infinite; border: 2px solid white; }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
+        /* 网格动画 */
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
         .slide-right { transform: translateX(30px); opacity: 0; }
@@ -71,55 +73,28 @@
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
-        /* Modals */
-        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
-        .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; }
-        .modal-input { width: 100%; padding: 15px; text-align: center; border-radius: 12px; border: 1px solid #ddd; outline: none; font-size: 16px; margin-bottom: 10px; }
-
-        /* --- 修复点：记录页面导航栏样式 --- */
+        /* --- Registro 页面导航栏彻底修复 --- */
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         
         .v-nav { 
             display: flex; 
             align-items: center; 
-            justify-content: center; 
-            height: 55px; 
-            padding: 8px 20px 0 20px; 
-            flex-shrink: 0; 
+            height: 60px; 
+            padding: 0 10px; 
             background: #fff; 
             border-bottom: 1px solid #f2f2f7; 
-            z-index: 200; 
-            position: relative; /* 关键：作为绝对定位参考 */
+            flex-shrink: 0;
+            position: relative;
         }
-        .back-arrow { 
-            font-size: 28px; 
-            width: 45px; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            height: 100%; 
-            position: absolute; /* 关键修复：脱离 Flex 流 */
-            left: 15px;         /* 固定左侧 */
-            z-index: 210;
-        }
-        .v-h2 { 
-            font-size: 14px;    /* 缩小标题字体防止挤压 */
-            font-weight: 900; 
-            text-transform: uppercase; 
-            margin: 0; 
-            text-align: center; 
-            width: 100%;        /* 撑满整行实现居中 */
-            pointer-events: none; 
-        }
-        .v-user-tag { 
-            font-size: 11px; 
-            color: #8e8e93; 
-            font-weight: 700; 
-            position: absolute; /* 关键修复：脱离 Flex 流 */
-            right: 15px;        /* 固定右侧 */
-            z-index: 210;
-        }
+
+        /* 强制左中右三段布局，彻底解决重叠 */
+        .v-nav-left { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; }
+        .v-nav-center { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .v-nav-right { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
+
+        .back-arrow { font-size: 30px; cursor: pointer; padding: 10px; line-height: 1; }
+        .v-h2 { font-size: 13px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; white-space: nowrap; letter-spacing: -0.2px; }
+        .v-user-tag { font-size: 11px; color: #8e8e93; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
         
         #logContainer { flex: 1; overflow-y: auto; padding: 3px 15px 15px 15px; -webkit-overflow-scrolling: touch; }
         .day-header { background: var(--btn-gray); padding: 14px 15px; font-size: 14px; font-weight: 800; color: #000; display: flex; align-items: center; position: sticky; top: 0; z-index: 150; border-radius: 12px; margin-bottom: 15px; min-height: 48px; }
@@ -149,6 +124,12 @@
         .undo-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--btn-gray); border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #ddd; }
         .del-row { color: var(--red); font-weight: 900; font-size: 20px; text-align: center; width: 30px; cursor: pointer; }
         .editable-causale { color: #000; display: block; min-height: 24px; padding: 8px 0; word-wrap: break-word; white-space: normal; line-height: 1.3; font-size: 12px; }
+
+        /* Modals */
+        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
+        .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; margin-top: 10px; }
+        .modal-input { width: 100%; padding: 15px; text-align: center; border-radius: 12px; border: 1px solid #ddd; outline: none; font-size: 16px; margin-bottom: 10px; }
     </style>
 </head>
 <body class="p1">
@@ -176,10 +157,10 @@
 
     <div class="color-picker-wrap" id="pickerContainer"><input type="color" id="floorColor" onchange="updateThemeColor(this.value)"></div>
 
+    <!-- Modals -->
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
     
-    <!-- FUORI LINEA 原因输入框 -->
-    <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Cosa hai fatto?"><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
+    <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Attività svolta..."><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
 
     <div id="editModal"><div class="modal-content"><h3>Modifica Causale</h3><input type="text" id="editCausaleInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
     
@@ -189,9 +170,9 @@
 
     <div id="v">
         <div class="v-nav">
-            <div class="back-arrow" onclick="closeMemoria()">←</div>
-            <h2 class="v-h2">REGISTRO INTERVENTI</h2>
-            <div id="regNameDisp" class="v-user-tag">Hu_Shan</div>
+            <div class="v-nav-left"><div class="back-arrow" onclick="closeMemoria()">←</div></div>
+            <div class="v-nav-center"><h2 class="v-h2">REGISTRO INTERVENTI</h2></div>
+            <div class="v-nav-right"><div id="regNameDisp" class="v-user-tag">Hu_Shan</div></div>
         </div>
         <div id="logContainer"></div>
         <div class="v-footer">
@@ -205,6 +186,7 @@
     </div>
 
 <script>
+    // --- 1. Firebase 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -215,6 +197,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // --- 2. 班次逻辑 ---
     function getRealTimeTurno() {
         const now = new Date();
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -246,6 +229,7 @@
     }
     const myDeviceId = localStorage.getItem('deviceId');
 
+    // --- 3. 基础数据 ---
     const pianoData = { 
         1: ['101','101bis','102','102bis','103','103bis','104','104bis','105','105bis','106','106bis','107','107bis','108','108bis'], 
         2: ['201','201bis','202','202bis','203','203bis','204','204bis','205','205bis','206','206bis','207','207bis','208','208bis'], 
@@ -263,6 +247,7 @@
     let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
     let isInitialLoad = true; 
 
+    // --- 4. 实时监听 ---
     db.ref('active_calls').on('value', (snapshot) => {
         act = snapshot.val() || {};
         if (isInitialLoad) {
@@ -289,31 +274,28 @@
         localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
     }
 
-    function archiveEntry(id, causale, startA, startD, endT) {
-        const newLog = { 
-            i: id, 
-            day: new Date().toLocaleDateString('it-IT'), 
-            s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-            tA: Math.round((startD - startA) / 60000), 
-            tD: Math.round((endT - startD) / 60000), 
-            st: startA,
-            c: causale 
-        };
-        logs.push(newLog);
-        if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
-        saveState();
-    }
-
+    // --- 5. 归档核心 ---
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) return; 
-        
         if (act[id].status === 'orange') {
             db.ref('active_calls/' + id).update({ status: 'red', startD: now, startB: now, takenBy: myDeviceId });
         } 
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
-            archiveEntry(id, act[id].causale || "-", act[id].startA, act[id].startD || act[id].startA, now);
-            db.ref('active_calls/' + id).update({ status: 'completed', endT: now });
+            const finalC = act[id].causale || "-";
+            const startD = act[id].startD || act[id].startA;
+            const newLog = { 
+                i: id, day: new Date().toLocaleDateString('it-IT'), 
+                s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+                tA: Math.round((startD - act[id].startA) / 60000), 
+                tD: Math.round((now - startD) / 60000), 
+                st: act[id].startA, c: finalC 
+            };
+            logs.push(newLog);
+            if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+            saveState();
+            if (id === 'FUORI') { db.ref('active_calls/FUORI').remove(); }
+            else { db.ref('active_calls/' + id).update({ status: 'completed', endT: now }); }
             renderGrid();
         }
     }
@@ -331,54 +313,45 @@
     function saveFuoriCausale() {
         const val = document.getElementById('fuoriCausaleInput').value.trim() || "Attività Extra";
         const fs = act['FUORI']; const now = Date.now();
-        archiveEntry('FUORI', val, fs.startA, fs.startD || fs.startA, now);
+        const startD = fs.startD || fs.startA;
+        const newLog = { i: 'FUORI', day: new Date().toLocaleDateString('it-IT'), s: new Date(fs.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - fs.startA) / 60000), tD: Math.round((now - startD) / 60000), st: fs.startA, c: val };
+        logs.push(newLog); if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+        saveState();
         db.ref('active_calls/FUORI').remove();
         document.getElementById('fuoriCausaleInput').value = "";
         document.getElementById('fuoriModal').style.display = 'none';
         renderGrid();
     }
 
+    // --- 6. UI 渲染 ---
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const turnoLabel = document.getElementById('turnoDisp');
         const contentArea = document.getElementById('dynamicContent');
-        const rt = getRealTimeTurno();
-        const isWorking = (myShift === rt);
-        
+        const systemTurno = getRealTimeTurno();
+        const isWorkingTime = (myShift === systemTurno);
         turnoLabel.innerText = myShift;
-        if (isWorking) {
-            contentArea.classList.remove('shift-lock-ui');
-            turnoLabel.classList.add('turno-on');
-        } else {
-            contentArea.classList.add('shift-lock-ui');
-            turnoLabel.classList.remove('turno-on');
-        }
-
-        const orangeIds = Object.keys(act).filter(k => k !== 'FUORI' && act[k].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
+        if (isWorkingTime) { contentArea.classList.remove('shift-lock-ui'); turnoLabel.classList.add('turno-on'); } 
+        else { contentArea.classList.add('shift-lock-ui'); turnoLabel.classList.remove('turno-on'); }
+        const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
         const c = themeConfig[curPiano];
-        
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
-            const b = document.createElement('button'); 
-            const s = isWorking ? act[i] : null; 
-            b.className = 'btn-machine';
-            b.innerText = i;
+            const b = document.createElement('button'); const s = isWorkingTime ? act[i] : null; 
+            b.className = 'btn-machine'; b.innerText = i;
             if (s && (s.status === 'orange' || s.status === 'red')) {
                 if (s.status === 'orange') { b.classList.add('waiting'); b.style.color = "#ffffff"; } 
-                else if (s.status === 'red') {
-                    if (s.takenBy === myDeviceId) { b.classList.add('or'); b.style.color = "#ffffff"; } 
-                    else { b.classList.add('locked-btn'); }
-                }
+                else { if (s.takenBy === myDeviceId) { b.classList.add('or'); b.style.color = "#ffffff"; } else { b.classList.add('locked-btn'); } }
             } else { b.style.color = c; b.style.backgroundColor = 'var(--btn-gray)'; }
-            b.onclick = () => isWorking && handleMachineClick(i); 
+            b.onclick = () => isWorkingTime && handleMachineClick(i); 
             wrap.appendChild(b);
             if (s && s.status === 'orange') {
-                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = orangeIds.indexOf(i) + 1; wrap.appendChild(badge);
+                const qNum = allOrangeIds.indexOf(i) + 1;
+                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = qNum; wrap.appendChild(badge);
             }
             gd.appendChild(wrap);
         });
-
-        const f = document.getElementById('btn-fuori'), fs = isWorking ? act['FUORI'] : null;
+        const f = document.getElementById('btn-fuori'), fs = isWorkingTime ? act['FUORI'] : null;
         f.className = (fs && fs.status === 'red') ? 'fuori-btn or' : 'fuori-btn';
         if (!(fs && fs.status === 'red')) f.style.color = c;
     }
@@ -394,13 +367,7 @@
         }
     }
 
-    function switchPiano(p, dir='left') { 
-        if(p===curPiano) return; 
-        const gd = document.getElementById('g'); 
-        gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); 
-        setTimeout(() => { curPiano = p; applyTheme(); gd.className = ''; }, 150); 
-    }
-
+    function switchPiano(p, dir='left') { if(p===curPiano) return; const gd = document.getElementById('g'); gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); setTimeout(() => { curPiano = p; applyTheme(); gd.className = ''; }, 150); }
     function applyTheme() { 
         const c=themeConfig[curPiano]; 
         document.querySelectorAll('.p-btn').forEach((b,i)=>{ 
@@ -409,12 +376,11 @@
             b.style.color = isTarget ? '#fff' : '#8e8e93';
             b.classList.toggle('active', isTarget); 
         }); 
-        document.getElementById('floorColor').value = c; 
-        renderGrid(); 
+        document.getElementById('floorColor').value = c; renderGrid(); 
     }
-    
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
 
+    // --- 7. 注册表 ---
     function renderLogs() {
         const container = document.getElementById('logContainer');
         const expandedDays = new Set();
@@ -423,9 +389,7 @@
         const oggi = new Date().toLocaleDateString('it-IT');
         const groups = {}; dayHistory.forEach(d => groups[d] = []);
         logs.forEach((l, idx) => { if (groups[l.day]) groups[l.day].push({ ...l, originalIndex: idx }); });
-        const sortedDays = Object.keys(groups).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join('')));
-        
-        sortedDays.forEach(day => {
+        Object.keys(groups).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const section = document.createElement('div');
             const isCollapsed = expandedDays.size === 0 ? (day !== oggi) : !expandedDays.has(day);
             section.className = 'day-section' + (isCollapsed ? ' collapsed' : '');
@@ -450,17 +414,7 @@
         });
     }
 
-    function handleCausaleClick(index) { 
-        clickCount++; 
-        if(clickCount===1) clickTimer=setTimeout(()=>clickCount=0,350); 
-        else { 
-            clearTimeout(clickTimer); clickCount=0; editIndex = index; 
-            document.getElementById('editCausaleInput').value=logs[index].c; 
-            document.getElementById('editModal').style.display='flex'; 
-            setTimeout(()=>document.getElementById('editCausaleInput').focus(),150); 
-        } 
-    }
-    
+    function handleCausaleClick(index) { clickCount++; if(clickCount===1) clickTimer=setTimeout(()=>clickCount=0,350); else { clearTimeout(clickTimer); clickCount=0; editIndex = index; document.getElementById('editCausaleInput').value=logs[index].c; document.getElementById('editModal').style.display='flex'; setTimeout(()=>document.getElementById('editCausaleInput').focus(),150); } }
     function confirmEdit() { logs[editIndex].c=document.getElementById('editCausaleInput').value.trim()||"-"; saveState(); document.getElementById('editModal').style.display='none'; renderLogs(); }
     function performUndo(e) { e.stopPropagation(); if(undoStack.length){ let last=undoStack.pop(); logs=last.l; dayHistory=last.h; saveState(); renderLogs(); } }
     function deleteRow(index) { undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs.splice(index,1); saveState(); renderLogs(); }
@@ -479,14 +433,13 @@
         const groups = {}; dayHistory.forEach(d => groups[d] = []); 
         logs.forEach(l => { if (groups[l.day]) groups[l.day].push(l); }); 
         Object.keys(groups).filter(day => expandedDays.includes(day)).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => { 
-            text += `\n[ ${day} ]\n`; 
-            groups[day].sort((a,b) => b.st - a.st).forEach(l => { text += `${l.i}: ${l.s} | A:${l.tA}m | D:${l.tD}m | ${l.c}\n`; }); 
+            text += `\n[ ${day} ]\n`; groups[day].sort((a,b) => b.st - a.st).forEach(l => { text += `${l.i}: ${l.s} | A:${l.tA}m | D:${l.tD}m | ${l.c}\n`; }); 
         }); 
         if (navigator.share) await navigator.share({ title: `Registro`, text: text }); 
     }
 
     document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-    document.addEventListener('touchend', e => { if (document.getElementById('v').style.display === 'flex') return; let deltaX = e.changedTouches[0].screenX - touchStartX; if (Math.abs(deltaX) > 70) deltaX > 0 ? (curPiano > 1 && switchPiano(curPiano - 1, 'right')) : (curPiano < 5 && switchPiano(curPiano + 1, 'left')); }, { passive: true });
+    document.addEventListener('touchend', e => { if (document.getElementById('v').style.display === 'flex') return; let dX = e.changedTouches[0].screenX - touchStartX; if (Math.abs(dX) > 70) dX > 0 ? (curPiano > 1 && switchPiano(curPiano - 1, 'right')) : (curPiano < 5 && switchPiano(curPiano + 1, 'left')); }, { passive: true });
 
     document.getElementById('userNameDisp').innerText = document.getElementById('regNameDisp').innerText = currentUserName;
     document.getElementById('curYear').innerText = new Date().getFullYear();
