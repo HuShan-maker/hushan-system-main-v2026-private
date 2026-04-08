@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.11</title>
+    <title>B - Technician Side Full v18.9.16</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -17,7 +17,6 @@
             --red: #ff3b30; 
             --orange: #ff9500; 
             --btn-gray: #f2f2f7; 
-            /* 定义灰红色，作为被别人锁定的状态 */
             --locked-gray-red: #bb8888; 
         }
         * { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -25,8 +24,13 @@
         body { 
             font-family: -apple-system, sans-serif; background: var(--bg); color: #000; 
             padding: calc(15px + env(safe-area-inset-top)) 20px 20px 20px; 
-            margin: 0; transition: background 0.4s; overflow-x: hidden; touch-action: pan-y; 
+            margin: 0; transition: background 0.4s, opacity 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
+
+        /* 新增：班次标签样式 */
+        .turno-badge { font-size: 11px; font-weight: 800; color: #fff; background: #8e8e93; padding: 2px 8px; border-radius: 6px; margin-left: 8px; text-transform: uppercase; vertical-align: middle; }
+        .turno-on { background: #34c759 !important; }
+        .shift-lock-ui { opacity: 0.6; pointer-events: none; filter: grayscale(1); }
 
         .h { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 35px; }
         h2 { margin: 0; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.3px; line-height: 1.1; }
@@ -59,16 +63,9 @@
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
-        
-        /* 其他B端锁定样式：灰红色，降低饱和度和明度 */
-        .locked-btn { 
-            background: var(--locked-gray-red) !important; 
-            color: rgba(255, 255, 255, 0.8) !important; /* 文字略微透明 */
-            opacity: 0.8; /* 整体略微透明 */
-            pointer-events: none; /* 禁用点击 */
-        }
-        
+        .locked-btn { background: var(--locked-gray-red) !important; color: rgba(255, 255, 255, 0.8) !important; opacity: 0.8; pointer-events: none; }
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
+
         @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
         @keyframes pulseOrange { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.96); opacity: 0.7; } }
 
@@ -123,9 +120,13 @@
 <body class="p1">
 
     <div class="h">
-        <div class="title-group"><h2>OPERATORE</h2><div id="userNameDisp" class="user-subtitle" onclick="handleNameClick()">Hu_Shan</div></div>
+        <div class="title-group">
+            <h2>OPERATORE <span id="turnoDisp" class="turno-badge">--</span></h2>
+            <div id="userNameDisp" class="user-subtitle" onclick="handleNameClick()">Hu_Shan</div>
+        </div>
         <button class="reg-btn" onclick="showMemoria()">registro</button>
     </div>
+
     <div class="pianos">
         <button class="p-btn active" id="p-btn-1" onclick="switchPiano(1)">Piano 1</button>
         <button class="p-btn" id="p-btn-2" onclick="switchPiano(2)">Piano 2</button>
@@ -133,12 +134,17 @@
         <button class="p-btn" id="p-btn-4" onclick="switchPiano(4)">Piano 4</button>
         <button class="p-btn" id="p-btn-5" onclick="switchPiano(5)">Piano 5</button>
     </div>
-    <div id="g"></div>
-    <div class="bottom-area"><button id="btn-fuori" class="fuori-btn" onclick="toggleFuori()">FUORI LINEA</button></div>
+
+    <div id="dynamicContent">
+        <div id="g"></div>
+        <div class="bottom-area"><button id="btn-fuori" class="fuori-btn" onclick="toggleFuori()">FUORI LINEA</button></div>
+    </div>
+
     <div class="color-picker-wrap" id="pickerContainer"><input type="color" id="floorColor" onchange="updateThemeColor(this.value)"></div>
 
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
-    <div id="modal"><div class="modal-content"><h3>Causale</h3><input type="text" id="causaleInput" placeholder="Inserire causale..." autocomplete="off"><button class="modal-btn" onclick="saveCausale()">SALVA</button></div></div>
+    <div id="modal" style="display:none"></div>
+
     <div id="editModal"><div class="modal-content"><h3>Modifica</h3><input type="text" id="editCausaleInput" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
     <div id="confirmModal"><div class="modal-content"><h3>Svuota tutto il registro?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('confirmModal').style.display='none'">NO</button><button style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;" onclick="doClear()">SI</button></div></div></div>
     <div id="dayConfirmModal"><div class="modal-content"><h3>vuoi cancellare tutti i dati del giorno?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('dayConfirmModal').style.display='none'">NO</button><button id="confirmDayDelBtn" style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;">SI</button></div></div></div>
@@ -161,6 +167,7 @@
     </div>
 
 <script>
+    // --- Firebase 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -170,6 +177,23 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    // --- 核心班次逻辑 ---
+    function getRealTimeTurno() {
+        const now = new Date();
+        const hour = now.getHours() + (now.getMinutes() / 60);
+        const start = new Date(now.getFullYear(), 0, 1);
+        const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
+        const isSingleWeek = week % 2 !== 0; 
+        const isAfternoon = (hour >= 14.25); 
+        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
+    }
+
+    let deviceTurno = localStorage.getItem('deviceTurno') || "";
+    if (!deviceTurno) {
+        deviceTurno = "Turno " + prompt("Configurazione: Questo dispositivo è del Turno A o B?").toUpperCase();
+        localStorage.setItem('deviceTurno', deviceTurno);
+    }
 
     // --- 设备身份标识 ---
     if (!localStorage.getItem('deviceId')) {
@@ -193,11 +217,12 @@
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
     let undoStack = [], curPiano = 1, tempLog = null, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
     let isInitialLoad = true; 
-    let currentActiveId = null;
 
+    // --- 实时数据监听 ---
     db.ref('active_calls').on('value', (snapshot) => {
-        const data = snapshot.val() || {};
+        act = snapshot.val() || {};
         if (isInitialLoad) {
+            const data = act;
             let redP = 0, orangeP = 0, oldest = Infinity;
             for(let p=1; p<=5; p++) {
                 pianoData[p].forEach(id => {
@@ -211,8 +236,6 @@
             curPiano = redP || orangeP || 1;
             isInitialLoad = false;
         }
-        act = data; 
-        saveState();
         renderGrid(); 
         updateGlobalBadges(); 
         applyTheme();
@@ -224,9 +247,10 @@
     }
 
     function updateGlobalBadges() {
+        const isMyShift = (deviceTurno === getRealTimeTurno());
         for (let p = 1; p <= 5; p++) {
             const btn = document.getElementById(`p-btn-${p}`);
-            const count = pianoData[p].filter(id => act[id] && (act[id].status === 'orange' || act[id].status === 'red')).length;
+            const count = isMyShift ? pianoData[p].filter(id => act[id] && (act[id].status === 'orange' || act[id].status === 'red')).length : 0;
             const oldBadge = btn.querySelector('.p-badge');
             if (oldBadge) oldBadge.remove();
             if (count > 0) {
@@ -248,51 +272,89 @@
             });
         } 
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
-            currentActiveId = id;
-            db.ref('active_calls/' + id).update({ status: 'finishing', techName: currentUserName, endT: now, causale: "IN SCRITTURA..." });
+            // --- 核心修复：自动归档 A 端 Causale ---
+            const finalCausale = act[id].causale || "-";
             let startD = act[id].startD || act[id].startA;
-            tempLog = { i: id, day: new Date().toLocaleDateString('it-IT'), s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - act[id].startA) / 60000), tD: Math.round((now - startD) / 60000), st: act[id].startA };
-            showModal();
+            
+            const newLog = { 
+                i: id, 
+                day: new Date().toLocaleDateString('it-IT'), 
+                s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+                tA: Math.round((startD - act[id].startA) / 60000), 
+                tD: Math.round((now - startD) / 60000), 
+                st: act[id].startA,
+                c: finalCausale // 使用 A 端数据
+            };
+            
+            logs.push(newLog);
+            if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+            saveState();
+
+            // 更新 Firebase
+            if (id === 'FUORI') {
+                db.ref('active_calls/FUORI').remove();
+            } else {
+                db.ref('active_calls/' + id).update({
+                    status: 'completed',
+                    causale: finalCausale,
+                    endT: now,
+                    techName: currentUserName
+                });
+            }
+            renderGrid();
         }
     }
 
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
+        const turnoLabel = document.getElementById('turnoDisp');
+        const contentArea = document.getElementById('dynamicContent');
+        const currentActiveShift = getRealTimeTurno();
+        
+        turnoLabel.innerText = currentActiveShift;
+        const isMyShift = (deviceTurno === currentActiveShift);
+
+        // 处理班次锁
+        if (isMyShift) {
+            contentArea.classList.remove('shift-lock-ui');
+            turnoLabel.classList.add('turno-on');
+        } else {
+            contentArea.classList.add('shift-lock-ui');
+            turnoLabel.classList.remove('turno-on');
+        }
+
         const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
         const c = themeConfig[curPiano];
         
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
-            const b = document.createElement('button'); const s = act[i];
+            const b = document.createElement('button'); 
+            
+            // 如果不是我的班次，强制让 s = null (不显示动态)
+            const s = isMyShift ? act[i] : null;
             
             b.className = 'btn-machine';
             b.innerText = i;
             
-            // 核心逻辑：只有在 orange 或 red 且未完成状态下才应用特殊样式
             if (s && (s.status === 'orange' || s.status === 'red')) {
                 if (s.status === 'orange') {
                     b.classList.add('waiting');
                     b.style.color = "#ffffff";
-                    b.disabled = false;
                 } else if (s.status === 'red') {
                     if (s.takenBy === myDeviceId) {
                         b.classList.add('or');
                         b.style.color = "#ffffff";
-                        b.disabled = false;
                     } else {
-                        // 锁定状态：应用灰红色样式 (locked-btn)
                         b.classList.add('locked-btn');
-                        b.disabled = true;
                     }
                 }
             } else {
-                // 恢复 Piano 默认颜色（彻底修复维修完变蓝不恢复的问题）
                 b.style.color = c;
                 b.style.backgroundColor = 'var(--btn-gray)';
-                b.disabled = false;
             }
 
-            b.onclick = () => handleMachineClick(i); wrap.appendChild(b);
+            b.onclick = () => isMyShift && handleMachineClick(i); 
+            wrap.appendChild(b);
             
             if (s && s.status === 'orange') {
                 const qNum = allOrangeIds.indexOf(i) + 1;
@@ -301,28 +363,15 @@
             gd.appendChild(wrap);
         });
 
-        const f = document.getElementById('btn-fuori'), fs = act['FUORI'];
-        // FUORI LINEA 逻辑同步应用设备锁和灰红色
+        const f = document.getElementById('btn-fuori'), fs = isMyShift ? act['FUORI'] : null;
         if (fs && (fs.status === 'red' || fs.status === 'orange')) {
-            if (fs.status === 'red') {
-                if (fs.takenBy === myDeviceId) {
-                    f.className = 'fuori-btn or';
-                    f.disabled = false;
-                } else {
-                    f.className = 'fuori-btn locked-btn';
-                    f.disabled = true;
-                }
-            } else {
-                // orange 状态
-                f.className = 'fuori-btn or';
-                f.disabled = false;
-            }
+            f.className = 'fuori-btn or';
         } else {
             f.className = 'fuori-btn';
-            f.disabled = false;
             f.style.color = c;
             f.style.backgroundColor = 'var(--btn-gray)';
         }
+        f.onclick = () => isMyShift && toggleFuori();
     }
 
     function switchPiano(p, dir='left') { 
@@ -345,29 +394,6 @@
     }
     
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
-
-    function showModal() { document.getElementById('modal').style.display='flex'; document.getElementById('causaleInput').value=''; setTimeout(()=>document.getElementById('causaleInput').focus(),150); }
-    
-    function saveCausale() {
-        const val = document.getElementById('causaleInput').value.trim() || "-";
-        tempLog.c = val; logs.push(tempLog);
-        if(!dayHistory.includes(tempLog.day)) dayHistory.push(tempLog.day);
-        saveState();
-        if (currentActiveId) {
-            if (currentActiveId === 'FUORI') {
-                db.ref('active_calls/FUORI').remove();
-            } else {
-                db.ref('active_calls/' + currentActiveId).update({
-                    status: 'completed',
-                    causale: val,
-                    endT: Date.now(),
-                    techName: currentUserName
-                });
-            }
-        }
-        document.getElementById('modal').style.display='none'; 
-        renderGrid(); 
-    }
 
     function renderLogs() {
         const container = document.getElementById('logContainer');
@@ -413,7 +439,9 @@
     function saveName() { let n=document.getElementById('nameInput').value.trim(); if(n){ currentUserName = n; localStorage.setItem('userName',n); document.getElementById('userNameDisp').innerText=n; document.getElementById('regNameDisp').innerText=n; } document.getElementById('nameModal').style.display='none'; }
     function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
     function closeMemoria() { document.getElementById('v').style.display='none'; }
-    
+    function openConfirm() { document.getElementById('confirmModal').style.display='flex'; }
+    function doClear() { logs=[]; dayHistory=[]; saveState(); renderLogs(); document.getElementById('confirmModal').style.display='none'; }
+
     function toggleFuori() { 
         const now = Date.now();
         if(act['FUORI'] && (act['FUORI'].status === 'red' || act['FUORI'].status === 'orange')) {
@@ -421,9 +449,7 @@
         } else {
             db.ref('active_calls/FUORI').set({
                 status: 'red',
-                startA: now, 
-                startB: now, 
-                startD: now,
+                startA: now, startB: now, startD: now,
                 takenBy: myDeviceId
             });
         }
@@ -442,11 +468,7 @@
         if (navigator.share) await navigator.share({ title: `Registro`, text: shareText });
     }
 
-    // 左右滑动切换钢琴布局逻辑
-    document.addEventListener('touchstart', e => { 
-        touchStartX = e.changedTouches[0].screenX; 
-    }, { passive: true });
-
+    document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
     document.addEventListener('touchend', e => { 
         if (document.getElementById('v').style.display === 'flex') return;
         let deltaX = e.changedTouches[0].screenX - touchStartX; 
@@ -456,10 +478,6 @@
         } 
     }, { passive: true });
 
-    function openConfirm() { document.getElementById('confirmModal').style.display='flex'; }
-    function doClear() { logs=[]; dayHistory=[]; saveState(); renderLogs(); document.getElementById('confirmModal').style.display='none'; }
-
-    // 初始化显示
     document.getElementById('userNameDisp').innerText = currentUserName;
     document.getElementById('regNameDisp').innerText = currentUserName;
     document.getElementById('curYear').innerText = new Date().getFullYear();
