@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.24</title>
+    <title>B - Technician Side Full v18.9.25</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -44,7 +44,7 @@
         .user-subtitle { font-size: 14px; color: #8e8e93; font-weight: 600; margin-top: 5px; height: 25px; display: flex; align-items: center; cursor: pointer; min-width: 50px; }
         .reg-btn { background: #000; color: #fff; font-size: 11px; border: none; padding: 0 14px; border-radius: 9px; font-weight: 700; text-transform: uppercase; height: 25px; display: flex; align-items: center; }
         
-        /* 钢琴 */
+        /* 钢琴按钮 */
         .pianos { display: flex; gap: 5px; margin-bottom: 25px; padding: 12px 0 8px 0; overflow: visible; }
         .p-btn { flex: 1; background: var(--btn-gray); color: #8e8e93; border: none; padding: 10px 0; border-radius: 12px; font-weight: 700; font-size: 10px; transition: 0.2s; position: relative; }
         .p-btn.active { color: #fff !important; }
@@ -73,7 +73,7 @@
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
-        /* --- Registro 页面导航栏彻底修复 --- */
+        /* --- Registro 页面导航栏 --- */
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         
         .v-nav { 
@@ -87,7 +87,6 @@
             position: relative;
         }
 
-        /* 强制左中右三段布局，彻底解决重叠 */
         .v-nav-left { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; }
         .v-nav-center { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .v-nav-right { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
@@ -279,7 +278,14 @@
         const now = Date.now();
         if (!act[id]) return; 
         if (act[id].status === 'orange') {
-            db.ref('active_calls/' + id).update({ status: 'red', startD: now, startB: now, takenBy: myDeviceId });
+            // 关键修复：加入 techName 同步名字
+            db.ref('active_calls/' + id).update({ 
+                status: 'red', 
+                startD: now, 
+                startB: now, 
+                takenBy: myDeviceId,
+                techName: currentUserName 
+            });
         } 
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
             const finalC = act[id].causale || "-";
@@ -306,7 +312,15 @@
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
-            db.ref('active_calls/FUORI').set({ status: 'red', startA: now, startB: now, startD: now, takenBy: myDeviceId });
+            // 关键修复：加入 techName 同步名字
+            db.ref('active_calls/FUORI').set({ 
+                status: 'red', 
+                startA: now, 
+                startB: now, 
+                startD: now, 
+                takenBy: myDeviceId,
+                techName: currentUserName
+            });
         }
     }
 
@@ -380,7 +394,6 @@
     }
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
 
-    // --- 7. 注册表 ---
     function renderLogs() {
         const container = document.getElementById('logContainer');
         const expandedDays = new Set();
