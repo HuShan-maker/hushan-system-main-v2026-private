@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Controllo Linee Professional v18.9.32</title>
+    <title>C - Controllo Linee Professional v18.9.33</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -81,17 +81,16 @@
         
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { padding: 10px 2px; text-align: center; font-size: 11px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
-        th { font-weight: 700; color: var(--text-sec); }
+        th { font-weight: 700; color: var(--text-sec); text-transform: uppercase; font-size: 9px; }
         .undo-head { font-size: 16px; color: var(--black); cursor: pointer; font-weight: 700; display: inline-block; padding: 5px; }
         .del-row { color: var(--red); font-weight: 700; cursor: pointer; font-size: 18px; }
 
-        /* --- 核心修改：Copyright 样式微调 --- */
         .footer-text { 
             text-align: center; 
             padding: 15px 0; 
             font-size: 10px; 
-            font-weight: 500; /* 降低厚重感 */
-            color: #c7c7cc;  /* 减少颜色深度，iOS 灰色 */
+            font-weight: 500; 
+            color: #aeb0b8;  /* 稍微加深，更清晰的国际大厂风格 */
             text-transform: uppercase; 
             letter-spacing: 0.5px; 
         }
@@ -137,6 +136,32 @@
     let cloudData = {};
     let lastDeleted = null;
 
+    // --- 30天自动清理逻辑 ---
+    function autoCleanOldRecords() {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        let needsSave = false;
+        // 过滤掉30天以前的日期
+        dayHistory = dayHistory.filter(dayStr => {
+            const [d, m, y] = dayStr.split('/');
+            const recordDate = new Date(y, m - 1, d);
+            if (recordDate < thirtyDaysAgo) {
+                // 如果日期超过30天，从logs中删除该天的记录
+                logs = logs.filter(l => l.day !== dayStr);
+                needsSave = true;
+                return false; 
+            }
+            return true;
+        });
+
+        if (needsSave) {
+            processedStarts = new Set(logs.map(l => l.st));
+            saveState();
+        }
+    }
+
+    autoCleanOldRecords(); 
     setInterval(() => renderCombinedCards(), 30000); 
 
     function getRealTimeTurno() {
@@ -305,12 +330,11 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:18%">LINEA</th>
-                                <th style="width:12%">WAIT</th>
-                                <th style="width:12%">WORK</th>
-                                <th style="width:12%">TOT</th>
-                                <th style="width:36%">CAUSALE</th>
-                                <th style="width:10%"><span class="undo-head" onclick="undoAction(event)">↺</span></th>
+                                <th style="width:20%">LINEA</th>
+                                <th style="width:15%">WAIT</th>
+                                <th style="width:15%">WORK</th>
+                                <th style="width:35%">CAUSALE</th>
+                                <th style="width:15%"><span class="undo-head" onclick="undoAction(event)">↺</span></th>
                             </tr>
                         </thead>
                         <tbody>${dayLogs.map(l => {
@@ -319,9 +343,7 @@
                                 <td><b>${l.i}</b></td>
                                 <td>${l.tA}m</td>
                                 <td>${l.tD}m</td>
-                                <td><b>${l.tA+l.tD}m</b></td>
                                 <td style="font-size:9px">${l.c}</td>
-                                <td>${l.tech}</td>
                                 <td class="del-row" onclick="deleteRow(${idx})">×</td>
                             </tr>`}).join('')}</tbody>
                     </table>
