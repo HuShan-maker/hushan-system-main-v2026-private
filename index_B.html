@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Technician Side Full v18.9.25</title>
+    <title>B - Technician Side Full v18.9.26</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -73,24 +73,12 @@
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
-        /* --- Registro 页面导航栏 --- */
+        /* --- Registro 页面 --- */
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
-        
-        .v-nav { 
-            display: flex; 
-            align-items: center; 
-            height: 60px; 
-            padding: 0 10px; 
-            background: #fff; 
-            border-bottom: 1px solid #f2f2f7; 
-            flex-shrink: 0;
-            position: relative;
-        }
-
+        .v-nav { display: flex; align-items: center; height: 60px; padding: 0 10px; background: #fff; border-bottom: 1px solid #f2f2f7; flex-shrink: 0; position: relative; }
         .v-nav-left { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; }
         .v-nav-center { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .v-nav-right { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
-
         .back-arrow { font-size: 30px; cursor: pointer; padding: 10px; line-height: 1; }
         .v-h2 { font-size: 13px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; white-space: nowrap; letter-spacing: -0.2px; }
         .v-user-tag { font-size: 11px; color: #8e8e93; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
@@ -106,9 +94,9 @@
 
         table { width: 100%; border-collapse: collapse; table-layout: fixed; } 
         th, td { padding: 12px 2px; text-align: center; font-size: 14px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
-        th { color: #8e8e93; font-size: 9px; text-transform: uppercase; background: #fff; position: sticky; top: 48px; z-index: 140; letter-spacing: -0.2px; }
+        th { color: #8e8e93; font-size: 9px; text-transform: uppercase; background: #fff; position: sticky; top: 48px; z-index: 140; }
         .col-time { text-align: left !important; padding-left: 8px !important; width: 85px; }
-        .time-cell { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; line-height: 1.1; font-size: 13.5px; font-weight: 800; padding: 2px 0; height: 100%; }
+        .time-cell { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; line-height: 1.1; font-size: 13.5px; font-weight: 800; }
         .t-a { color: var(--orange); }
         .t-d { color: var(--red); }
         
@@ -117,14 +105,12 @@
         .bottom-action-btn { border: none; padding: 10px 0; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; flex: 1; max-width: 140px; cursor: pointer; }
         .export-btn { background: #000; color: #fff; }
         .clear-btn { background: var(--btn-gray); color: var(--red); border: 1px solid #ddd; }
-        .v-edit-hint { font-size: 9px; color: #8e8e93; text-align: center; margin-bottom: 10px; font-weight: 600; }
-        .copy-text { text-align: center; font-size: 11px; color: #000000; margin-top: 5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+        .copy-text { text-align: center; font-size: 11px; color: #000000; margin-top: 5px; font-weight: 800; text-transform: uppercase; }
 
-        .undo-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--btn-gray); border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer; border: 1px solid #ddd; }
-        .del-row { color: var(--red); font-weight: 900; font-size: 20px; text-align: center; width: 30px; cursor: pointer; }
-        .editable-causale { color: #000; display: block; min-height: 24px; padding: 8px 0; word-wrap: break-word; white-space: normal; line-height: 1.3; font-size: 12px; }
+        .undo-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--btn-gray); border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .del-row { color: var(--red); font-weight: 900; font-size: 20px; text-align: center; cursor: pointer; }
+        .editable-causale { color: #000; display: block; padding: 8px 0; word-wrap: break-word; font-size: 12px; }
 
-        /* Modals */
         #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
         .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; margin-top: 10px; }
@@ -156,15 +142,11 @@
 
     <div class="color-picker-wrap" id="pickerContainer"><input type="color" id="floorColor" onchange="updateThemeColor(this.value)"></div>
 
-    <!-- Modals -->
+    <!-- Modals (保持不变) -->
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
-    
     <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Attività svolta..."><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
-
     <div id="editModal"><div class="modal-content"><h3>Modifica Causale</h3><input type="text" id="editCausaleInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
-    
     <div id="confirmModal"><div class="modal-content"><h3>Svuota tutto il registro?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('confirmModal').style.display='none'">NO</button><button style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;" onclick="doClear()">SI</button></div></div></div>
-    
     <div id="dayConfirmModal"><div class="modal-content"><h3>Cancellare i dati del giorno?</h3><div style="display:flex;gap:15px;margin-top:10px;"><button style="background:#e5e5ea;flex:1;padding:15px;border-radius:15px;border:none;" onclick="document.getElementById('dayConfirmModal').style.display='none'">NO</button><button id="confirmDayDelBtn" style="background:var(--red);color:#fff;flex:1;padding:15px;border-radius:15px;border:none;">SI</button></div></div></div>
 
     <div id="v">
@@ -179,7 +161,7 @@
                 <button class="bottom-action-btn clear-btn" onclick="openConfirm()">Svuota tutto</button>
                 <button class="bottom-action-btn export-btn" onclick="shareRegistro()">INVIO REGISTRO</button>
             </div>
-            <div class="v-edit-hint">doppio tocco per modificare la causale， x per cancellare</div>
+            <div class="v-edit-hint" style="font-size: 9px; color:#8e8e93; text-align:center;">doppio tocco per modificare, x per cancellare</div>
             <div class="copy-text">© <span id="curYear"></span> Hu Shan. All rights reserved.</div>
         </div>
     </div>
@@ -246,9 +228,29 @@
     let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
     let isInitialLoad = true; 
 
-    // --- 4. 实时监听 ---
+    // --- 4. 核心监听器：包含班次自动清理逻辑 ---
     db.ref('active_calls').on('value', (snapshot) => {
-        act = snapshot.val() || {};
+        const rawData = snapshot.val() || {};
+        const currentSystemTurno = getRealTimeTurno();
+        let needsLocalArchive = false;
+
+        // 班次扫描：处理过期任务
+        Object.keys(rawData).forEach(id => {
+            const item = rawData[id];
+            // 如果云端任务的班次 (item.turno) 和 现在的系统班次不一致
+            if (item.turno && item.turno !== currentSystemTurno) {
+                const now = Date.now();
+                const tech = item.techName || "AUTO-CLOSE"; // 如果没修完，名字记为自动结束
+                archiveIntervention(id, item.causale + " (Fine Turno)", item.startA, item.startD || item.startA, now, tech);
+                db.ref('active_calls/' + id).remove();
+                needsLocalArchive = true;
+            }
+        });
+
+        if(needsLocalArchive) saveState();
+
+        // 更新本地 UI 数据
+        act = rawData;
         if (isInitialLoad) {
             let redP = 0, orangeP = 0, oldest = Infinity;
             for(let p=1; p<=5; p++) {
@@ -273,12 +275,11 @@
         localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
     }
 
-    // --- 5. 归档核心 ---
+    // --- 5. 归档逻辑 ---
     function handleMachineClick(id) {
         const now = Date.now();
         if (!act[id]) return; 
         if (act[id].status === 'orange') {
-            // 关键修复：加入 techName 同步名字
             db.ref('active_calls/' + id).update({ 
                 status: 'red', 
                 startD: now, 
@@ -288,22 +289,25 @@
             });
         } 
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
-            const finalC = act[id].causale || "-";
-            const startD = act[id].startD || act[id].startA;
-            const newLog = { 
-                i: id, day: new Date().toLocaleDateString('it-IT'), 
-                s: new Date(act[id].startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-                tA: Math.round((startD - act[id].startA) / 60000), 
-                tD: Math.round((now - startD) / 60000), 
-                st: act[id].startA, c: finalC 
-            };
-            logs.push(newLog);
-            if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
-            saveState();
+            const item = act[id];
+            archiveIntervention(id, item.causale || "-", item.startA, item.startD || item.startA, now, currentUserName);
             if (id === 'FUORI') { db.ref('active_calls/FUORI').remove(); }
             else { db.ref('active_calls/' + id).update({ status: 'completed', endT: now }); }
-            renderGrid();
         }
+    }
+
+    // 统筹归档函数
+    function archiveIntervention(id, causale, startA, startD, endT, tech) {
+        const newLog = { 
+            i: id, day: new Date().toLocaleDateString('it-IT'), 
+            s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+            tA: Math.round((startD - startA) / 60000), 
+            tD: Math.round((endT - startD) / 60000), 
+            st: startA, c: causale, tech: tech // 记录当时操作的人
+        };
+        logs.push(newLog);
+        if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+        saveState();
     }
 
     function toggleFuori() {
@@ -312,14 +316,15 @@
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
-            // 关键修复：加入 techName 同步名字
+            // 注意：这里要带上当前班次标记，供以后跨班清理识别
             db.ref('active_calls/FUORI').set({ 
                 status: 'red', 
                 startA: now, 
                 startB: now, 
                 startD: now, 
                 takenBy: myDeviceId,
-                techName: currentUserName
+                techName: currentUserName,
+                turno: getRealTimeTurno() 
             });
         }
     }
@@ -327,17 +332,14 @@
     function saveFuoriCausale() {
         const val = document.getElementById('fuoriCausaleInput').value.trim() || "Attività Extra";
         const fs = act['FUORI']; const now = Date.now();
-        const startD = fs.startD || fs.startA;
-        const newLog = { i: 'FUORI', day: new Date().toLocaleDateString('it-IT'), s: new Date(fs.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), tA: Math.round((startD - fs.startA) / 60000), tD: Math.round((now - startD) / 60000), st: fs.startA, c: val };
-        logs.push(newLog); if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
-        saveState();
+        archiveIntervention('FUORI', val, fs.startA, fs.startD || fs.startA, now, currentUserName);
         db.ref('active_calls/FUORI').remove();
         document.getElementById('fuoriCausaleInput').value = "";
         document.getElementById('fuoriModal').style.display = 'none';
         renderGrid();
     }
 
-    // --- 6. UI 渲染 ---
+    // --- 6. UI 渲染 & 辅助功能 (保持原有完整逻辑) ---
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const turnoLabel = document.getElementById('turnoDisp');
