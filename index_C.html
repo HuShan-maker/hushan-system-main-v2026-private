@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Controllo Linee Professional v18.9.26</title>
+    <title>C - Controllo Linee Professional v18.9.25</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -103,7 +103,6 @@
     </div>
 
 <script>
-    // --- 1. 初始化 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -114,16 +113,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function getRealTimeTurno() {
-        const now = new Date();
-        const hour = now.getHours() + (now.getMinutes() / 60);
-        const start = new Date(now.getFullYear(), 0, 1);
-        const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
-        const isSingleWeek = week % 2 !== 0; 
-        const isAfternoon = (hour >= 14.25); 
-        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
-    }
-
     let logs = JSON.parse(localStorage.getItem('c_local_v89') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('c_days_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
@@ -132,22 +121,15 @@
 
     setInterval(() => renderCombinedCards(), 60000);
 
-    // --- 2. Firebase 监听 & 跨班自动结算逻辑 ---
+    // --- Firebase 监听及存档逻辑 ---
     db.ref('active_calls').on('value', (snapshot) => {
         cloudData = snapshot.val() || {};
-        const currentSystemTurno = getRealTimeTurno();
         let needsSave = false;
 
         Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
-
-            // A. 跨班清理：如果任务班次与当前系统班次不符，强制存档并清理
-            const isWrongShift = item.turno && item.turno !== currentSystemTurno;
-            
-            // B. 正常结束：B端点击了结束
-            const isCompleted = item.status === 'completed';
-
-            if ((isWrongShift || isCompleted) && !processedStarts.has(item.startA)) {
+            // 当 B 端点击结束，任务进入 completed 状态时进行归档
+            if (item.status === 'completed' && !processedStarts.has(item.startA)) {
                 let startD = item.startD || item.startA;
                 const newEntry = {
                     i: id, 
@@ -157,15 +139,15 @@
                     tD: Math.round(((item.endT || Date.now()) - startD) / 60000),
                     st: item.startA, 
                     et: item.endT || Date.now(),
-                    c: isWrongShift ? item.causale + " (Fine Turno)" : (item.causale || "-"),
-                    tech: isWrongShift ? "AUTO-CLEAN" : (item.techName || item.takenBy || "-")
+                    c: item.causale || "-",
+                    // 核心修复：存档时捕获 B 端的人员名字
+                    tech: item.techName || item.takenBy || "-" 
                 };
                 logs.push(newEntry);
                 processedStarts.add(item.startA);
                 if (!dayHistory.includes(newEntry.day)) dayHistory.push(newEntry.day);
                 needsSave = true;
-                
-                // 清理云端
+                // 归档后从云端移除该记录
                 db.ref('active_calls/' + id).remove();
             }
         });
@@ -180,18 +162,20 @@
         localStorage.setItem('c_days_v89', JSON.stringify(dayHistory));
     }
 
-    // --- 3. 渲染逻辑 ---
+    // --- 主界面卡片渲染 ---
     function renderCombinedCards() {
         const list = document.getElementById('activeList'); 
         list.innerHTML = '';
         const todayStr = new Date().toLocaleDateString('it-IT');
 
+        // 处理本地已完成但尚未从列表手动隐藏的任务
         const localToDisplay = logs.filter(l => l.day === todayStr && !l.hideFromBoard).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, 
             causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true,
             sortTime: l.et || l.st, startTimeStr: l.s
         }));
 
+        // 处理云端实时任务（正在等待或正在维修）
         const cloudItems = Object.keys(cloudData).map(id => {
             const item = cloudData[id];
             return { 
@@ -201,6 +185,7 @@
             };
         });
 
+        // 合并并按时间倒序排序
         const all = [...localToDisplay, ...cloudItems].sort((a, b) => b.sortTime - a.sortTime);
 
         all.forEach(item => {
@@ -208,10 +193,15 @@
             let work = item.isLocal ? item.tD + "m" : (item.startB ? Math.round((Date.now()-item.startB)/60000)+"m" : "0m");
             
             let statusLabel, colorClass, statusKey;
-            if(item.status === 'orange') { statusLabel = 'ATTESA'; colorClass = 'orange'; statusKey = 'waiting'; } 
-            else if(item.status === 'red' || item.status === 'finishing') { statusLabel = 'LAVORO'; colorClass = 'red'; statusKey = 'working'; } 
-            else { statusLabel = 'FINE'; colorClass = 'black'; statusKey = 'completed'; }
+            if(item.status === 'orange') { 
+                statusLabel = 'ATTESA'; colorClass = 'orange'; statusKey = 'waiting';
+            } else if(item.status === 'red' || item.status === 'finishing') { 
+                statusLabel = 'LAVORO'; colorClass = 'red'; statusKey = 'working';
+            } else { 
+                statusLabel = 'FINE'; colorClass = 'black'; statusKey = 'completed';
+            }
             
+            // 核心修复：实时渲染时捕获 B 端人员名字
             const operator = item.techName || item.takenBy || "-";
             
             const card = document.createElement('div');
@@ -249,48 +239,79 @@
     function showHistory() { document.getElementById('historyPage').style.display = 'flex'; renderLogs(); }
     function closeHistory() { document.getElementById('historyPage').style.display = 'none'; }
 
+    // --- 档案页面渲染逻辑 ---
     function renderLogs() {
         const container = document.getElementById('logContainer'); 
         container.innerHTML = '';
         const todayStr = new Date().toLocaleDateString('it-IT');
+
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
             const isToday = (day === todayStr);
+            const displayStatus = isToday ? 'block' : 'none';
+            const arrow = isToday ? '▼' : '▶';
+
             const section = document.createElement('div');
             section.innerHTML = `
                 <div class="day-header" onclick="toggleDay(this)">
-                    <div><span style="color:var(--red); margin-right:12px;" onclick="deleteDay(event, '${day}')">×</span><span>${day} ${isToday ? '(OGGI)' : ''}</span></div>
-                    <span class="arrow-icon">${isToday ? '▼' : '▶'}</span>
+                    <div>
+                        <span style="color:var(--red); margin-right:12px; cursor:pointer" onclick="deleteDay(event, '${day}')">×</span>
+                        <span>${day} ${isToday ? '(OGGI)' : ''}</span>
+                    </div>
+                    <span class="arrow-icon">${arrow}</span>
                 </div>
-                <div class="day-content" style="display: ${isToday ? 'block' : 'none'}">
+                <div class="day-content" style="display: ${displayStatus}">
                     <table>
-                        <thead><tr><th>LINEA</th><th>A</th><th>D</th><th>CAUSALE</th><th>OPERATORE</th><th><span class="undo-head" onclick="undoAction(event)">↺</span></th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th style="width:15%">LINEA</th>
+                                <th style="width:10%">A</th>
+                                <th style="width:10%">D</th>
+                                <th style="width:35%">CAUSALE</th>
+                                <th style="width:20%">OPERATORE</th>
+                                <th style="width:10%"><span class="undo-head" onclick="undoAction(event)">↺</span></th>
+                            </tr>
+                        </thead>
                         <tbody>${dayLogs.map(l => {
                             const idx = logs.indexOf(l);
-                            return `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td><td style="font-size:9px">${l.c}</td><td>${l.tech}</td><td class="del-row" onclick="deleteRow(${idx})">×</td></tr>`}).join('')}</tbody>
+                            return `<tr>
+                                <td><b>${l.i}</b></td>
+                                <td>${l.tA}m</td>
+                                <td>${l.tD}m</td>
+                                <td style="font-size:9px">${l.c}</td>
+                                <td>${l.tech}</td>
+                                <td class="del-row" onclick="deleteRow(${idx})">×</td>
+                            </tr>`}).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
         });
     }
 
-    function toggleDay(header) {
-        const content = header.nextElementSibling;
-        const arrow = header.querySelector('.arrow-icon');
-        const isHidden = content.style.display === 'none';
-        content.style.display = isHidden ? 'block' : 'none';
-        arrow.innerText = isHidden ? '▼' : '▶';
+    function toggleDay(headerElement) {
+        const content = headerElement.nextElementSibling;
+        const arrow = headerElement.querySelector('.arrow-icon');
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            arrow.innerText = '▼';
+        } else {
+            content.style.display = 'none';
+            arrow.innerText = '▶';
+        }
     }
 
     function undoAction(e) {
-        e.stopPropagation();
+        if(e) e.stopPropagation();
         if(!lastDeleted) return;
-        if(lastDeleted.type === 'hide') logs[lastDeleted.index].hideFromBoard = false;
-        else if(lastDeleted.type === 'delete') {
+        if(lastDeleted.type === 'hide') {
+            logs[lastDeleted.index].hideFromBoard = false;
+        } else if(lastDeleted.type === 'delete') {
             logs.splice(lastDeleted.index, 0, lastDeleted.data);
             processedStarts.add(lastDeleted.data.st);
+            if(!dayHistory.includes(lastDeleted.data.day)) dayHistory.push(lastDeleted.data.day);
         }
-        lastDeleted = null; saveState(); renderCombinedCards(); renderLogs();
+        lastDeleted = null;
+        saveState(); renderCombinedCards(); renderLogs();
     }
 
     function deleteRow(idx) { 
@@ -309,7 +330,7 @@
     }
 
     function clearAll() {
-        if(!confirm("Svuota tutto?")) return;
+        if(!confirm("Svuota tutto l'archivio locale?")) return;
         logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs(); renderCombinedCards();
     }
 
