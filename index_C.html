@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Controllo Linee Professional v18.9.38</title>
+    <title>C - Controllo Side v23.0</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -23,7 +23,6 @@
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-shrink: 0; }
         .title-area h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
         
-        /* 顶部班次标签样式 - 与A/B端对齐 */
         .turno-badge { 
             font-size: 11px; font-weight: 800; color: #8e8e93; 
             background: #e5e5ea; padding: 3px 10px; border-radius: 8px; 
@@ -87,8 +86,8 @@
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { padding: 10px 2px; text-align: center; font-size: 11px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
         th { font-weight: 700; color: var(--text-sec); text-transform: uppercase; font-size: 9px; }
-        .undo-head { font-size: 16px; color: var(--black); cursor: pointer; font-weight: 700; display: inline-block; padding: 5px; }
-        .del-row { color: var(--red); font-weight: 700; cursor: pointer; font-size: 18px; }
+        .name-head { font-size: 9px; color: var(--text-sec); font-weight: 700; text-transform: uppercase; }
+        .tech-cell { font-size: 10px; font-weight: 600; color: var(--text-main); word-break: break-all; }
 
         .footer-text { text-align: center; padding: 20px 0; font-size: 11px; font-weight: 800; color: #000000; text-transform: uppercase; letter-spacing: 1px; }
     </style>
@@ -134,9 +133,7 @@
     let dayHistory = JSON.parse(localStorage.getItem('c_days_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
-    let lastDeleted = null;
 
-    // --- 30天自动清理逻辑 ---
     function autoCleanOldRecords() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -158,16 +155,12 @@
     }
     autoCleanOldRecords();
 
-    // --- 班次逻辑修正：基于总周数累加算法 ---
     function getRealTimeTurno() {
         const now = new Date();
         const hour = now.getHours() + (now.getMinutes() / 60);
-        
-        // 基准日期：2025年12月29日（2026年第1周周一）
         const baseDate = new Date(2025, 11, 29); 
         const msPerWeek = 7 * 24 * 60 * 60 * 1000;
         const totalWeeks = Math.floor((now - baseDate) / msPerWeek) + 1;
-
         const isSingleWeek = totalWeeks % 2 !== 0; 
         const isAfternoon = (hour >= 14.25); 
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
@@ -181,7 +174,6 @@
 
     setInterval(() => renderCombinedCards(), 30000); 
 
-    // Firebase 监听
     db.ref('active_calls').on('value', (snapshot) => {
         cloudData = snapshot.val() || {};
         const currentTurno = getRealTimeTurno();
@@ -218,7 +210,7 @@
             et: endT,
             c: item.causale || "-",
             tech: item.techName || item.takenBy || "-",
-            t: item.turno || getRealTimeTurno() // 保存班次信息
+            t: item.turno || getRealTimeTurno()
         };
         logs.push(newEntry);
         processedStarts.add(item.startA);
@@ -282,7 +274,7 @@
                         Inizio: <b>${item.startTimeStr}</b><br>
                         Attesa: <b>${waitMin}m</b> | Durata: <b>${workMin}m</b><br>
                         Causale: <b>${item.causale || "-"}</b><br>
-                        Technico: <b>${item.techName || item.takenBy || "-"}</b>
+                        Tecnico: <b>${item.techName || item.takenBy || "-"}</b>
                     </div>
                 </div>
                 <div class="card-right">
@@ -300,7 +292,6 @@
         if (isLocal) {
             const idx = logs.findIndex(l => l.st === st);
             if(idx !== -1) {
-                lastDeleted = { type: 'hide', index: idx, data: {...logs[idx]} };
                 logs[idx].hideFromBoard = true;
             }
         } else {
@@ -338,16 +329,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:20%">LINEA</th>
-                                <th style="width:15%">ATTESA</th>
-                                <th style="width:15%">DURATA</th>
-                                <th style="width:35%">CAUSALE</th>
-                                <th style="width:15%"><span class="undo-head" onclick="undoAction(event)">↺</span></th>
+                                <th style="width:18%">LINEA</th>
+                                <th style="width:13%">ATTESA</th>
+                                <th style="width:13%">DURATA</th>
+                                <th style="width:36%">CAUSALE</th>
+                                <th style="width:20%" class="name-head">NOME</th>
                             </tr>
                         </thead>
-                        <tbody>${dayLogs.map(l => {
-                            const idx = logs.indexOf(l);
-                            return `<tr>
+                        <tbody>${dayLogs.map(l => `<tr>
                                 <td><b>${l.i}</b></td>
                                 <td>${l.tA}m</td>
                                 <td>${l.tD}m</td>
@@ -355,8 +344,8 @@
                                     ${l.c}<br>
                                     <span style="color:#8e8e93; font-size:8px;">[${l.t || '-'}]</span>
                                 </td>
-                                <td class="del-row" onclick="deleteRow(${idx})">×</td>
-                            </tr>`}).join('')}</tbody>
+                                <td class="tech-cell">${l.tech || '-'}</td>
+                            </tr>`).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
@@ -371,24 +360,6 @@
         arrow.innerText = isHidden ? '▼' : '▶';
     }
 
-    function undoAction(e) {
-        if(e) e.stopPropagation();
-        if(!lastDeleted) return;
-        if(lastDeleted.type === 'hide') logs[lastDeleted.index].hideFromBoard = false;
-        else if(lastDeleted.type === 'delete') {
-            logs.splice(lastDeleted.index, 0, lastDeleted.data);
-            processedStarts.add(lastDeleted.data.st);
-        }
-        lastDeleted = null; saveState(); renderCombinedCards(); renderLogs();
-    }
-
-    function deleteRow(idx) { 
-        lastDeleted = { type: 'delete', index: idx, data: {...logs[idx]} };
-        const removed = logs.splice(idx, 1)[0];
-        processedStarts.delete(removed.st);
-        saveState(); renderLogs(); renderCombinedCards();
-    }
-    
     function deleteDay(e, day) {
         e.stopPropagation();
         if(!confirm("Eliminare record del " + day + "?")) return;
