@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Controllo Side v8</title>
+    <title>C - Controllo Side v23.5</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -151,19 +151,22 @@
     }
     autoCleanOldRecords();
 
+    // --- 班次逻辑：0-14.15 / 14.15-24.00 ---
     function getRealTimeTurno() {
         const now = new Date();
         const hour = now.getHours() + (now.getMinutes() / 60);
-        const baseDate = new Date(2025, 11, 29); 
-        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-        const totalWeeks = Math.floor((now - baseDate) / msPerWeek) + 1;
-        const isSingleWeek = totalWeeks % 2 !== 0; 
-        const isAfternoon = (hour >= 14.25); 
-        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
+        const todayStr = now.toLocaleDateString('it-IT');
+        
+        // 逻辑：14.15 分界。00:00-14:15 为班次 1，14:15-24:00 为班次 2
+        // 为了确保换班截断，我们将日期也作为 Turno 标识的一部分
+        const turnoType = (hour < 14.25) ? "T1" : "T2";
+        return `${todayStr}-${turnoType}`;
     }
 
     function updateHeaderTurno() {
-        document.getElementById('turnoDisp').innerText = getRealTimeTurno();
+        const fullTurno = getRealTimeTurno();
+        const displayTurno = fullTurno.split('-').pop() === "T1" ? "Turno Mattina" : "Turno Pomeriggio";
+        document.getElementById('turnoDisp').innerText = displayTurno;
     }
     updateHeaderTurno();
     setInterval(updateHeaderTurno, 60000);
@@ -172,13 +175,21 @@
 
     db.ref('active_calls').on('value', (snapshot) => {
         cloudData = snapshot.val() || {};
-        const currentTurno = getRealTimeTurno();
+        const currentTurnoID = getRealTimeTurno();
         let needsSave = false;
 
         Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
-            if (item.turno && item.turno !== currentTurno) {
-                const manualItem = { ...item, status: 'completed', endT: Date.now(), causale: "Chiusura turno" };
+            
+            // 核心逻辑：如果跨越了 14:15 或 00:00 (日期变了或 T 变了)
+            // 只要 item.turno（记录生成时的班次）不等于现在的班次 ID，就强行截断
+            if (item.turno && item.turno !== currentTurnoID) {
+                const manualItem = { 
+                    ...item, 
+                    status: 'completed', 
+                    endT: Date.now(), 
+                    causale: item.causale ? item.causale + " (Auto-Chiusura)" : "Chiusura fine turno" 
+                };
                 archiveTask(id, manualItem);
                 needsSave = true;
             }
@@ -206,7 +217,7 @@
             et: endT,
             c: item.causale || "-",
             tech: item.techName || item.takenBy || "-",
-            t: item.turno || getRealTimeTurno()
+            t: item.turno // 保存班次ID用于区分
         };
         logs.push(newEntry);
         processedStarts.add(item.startA);
@@ -225,6 +236,7 @@
         const now = Date.now();
         const todayStr = new Date().toLocaleDateString('it-IT');
 
+        // 主页只显示日期匹配今天的“已完成”记录
         const localToDisplay = logs.filter(l => l.day === todayStr && !l.hideFromBoard).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, 
             causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true,
@@ -240,18 +252,13 @@
             };
         });
 
-        // --- 核心修改：排序算法 ---
         const all = [...localToDisplay, ...cloudItems].sort((a, b) => {
             const nowTime = Date.now();
-            // 判断是否超过或等于15分钟
             const aIsTimeout = (!a.isLocal && a.status === 'orange' && Math.round((nowTime - a.startA) / 60000) >= 15);
             const bIsTimeout = (!b.isLocal && b.status === 'orange' && Math.round((nowTime - b.startA) / 60000) >= 15);
 
-            // 优先置顶超时呼叫
             if (aIsTimeout && !bIsTimeout) return -1;
             if (!aIsTimeout && bIsTimeout) return 1;
-
-            // 其次按时间倒序排列（最新的在最上面）
             return b.sortTime - a.sortTime;
         });
 
@@ -300,9 +307,7 @@
         if(!confirm(msg)) return;
         if (isLocal) {
             const idx = logs.findIndex(l => l.st === st);
-            if(idx !== -1) {
-                logs[idx].hideFromBoard = true;
-            }
+            if(idx !== -1) { logs[idx].hideFromBoard = true; }
         } else {
             const item = cloudData[id];
             if (item && item.startA === st) {
@@ -320,11 +325,9 @@
     function renderLogs() {
         const container = document.getElementById('logContainer'); 
         container.innerHTML = '';
-        const todayStr = new Date().toLocaleDateString('it-IT');
-
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
-            const isToday = (day === todayStr);
+            const isToday = (day === new Date().toLocaleDateString('it-IT'));
             const section = document.createElement('div');
             section.innerHTML = `
                 <div class="day-header" onclick="toggleDay(this)">
@@ -351,7 +354,7 @@
                                 <td>${l.tD}m</td>
                                 <td style="font-size:9px">
                                     ${l.c}<br>
-                                    <span style="color:#8e8e93; font-size:8px;">[${l.t || '-'}]</span>
+                                    <span style="color:#8e8e93; font-size:8px;">[${l.t ? l.t.split('-').pop() : '-'}]</span>
                                 </td>
                                 <td class="tech-cell">${l.tech || '-'}</td>
                             </tr>`).join('')}</tbody>
