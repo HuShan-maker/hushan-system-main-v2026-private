@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>A - Operator Side v22.9.2</title>
+    <title>A - Operator Side v22.9</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -72,8 +72,7 @@
 
     <div class="input-container">
         <div class="linea-row">
-            <!-- 加入了 onchange 自动保存线号的逻辑 -->
-            <input type="text" id="lineaInput" placeholder="NO." autocomplete="off" onchange="localStorage.setItem('saved_linea_num', this.value)">
+            <input type="text" id="lineaInput" placeholder="NO." autocomplete="off">
             <div class="turno-tag" id="turnoLabel">TURNO --</div>
         </div>
         
@@ -93,26 +92,9 @@
         <div id="statusText" class="btn-text">CHIAMARE ATTREZZISTA</div>
     </button>
 
-    <div class="footer-text">© 2026 HU SHAN · v22.9.2 · ALL RIGHTS RESERVED</div>
+    <div class="footer-text">© 2026 HU SHAN. ALL RIGHTS RESERVED</div>
 
 <script>
-    // --- 自动更新版本检测逻辑 ---
-    const APP_VERSION = "2026.04.10.v2"; 
-
-    (function() {
-        const savedVersion = localStorage.getItem('app_installed_version');
-        if (savedVersion !== APP_VERSION) {
-            localStorage.setItem('app_installed_version', APP_VERSION);
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(regs => {
-                    for(let reg of regs) reg.unregister();
-                });
-            }
-            window.location.reload(true);
-        }
-    })();
-
-    // --- Firebase 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -130,7 +112,7 @@
     const causaleSelect = document.getElementById('causaleSelect');
     const turnoLabel = document.getElementById('turnoLabel');
 
-    let isLocalAction = false; 
+    let isLocalAction = false; // 标记是否是本设备发起的呼叫
 
     function getActiveTurno() {
         const now = new Date();
@@ -149,16 +131,19 @@
         const id = lineaInput.value.trim().toLowerCase();
         if(!id) return;
         
-        const savedLinea = localStorage.getItem('myActiveCall'); 
+        const savedLinea = localStorage.getItem('myActiveCall'); // 获取本设备发起的活跃线号
         
         db.ref('active_calls/' + id).off();
         db.ref('active_calls/' + id).on('value', (snapshot) => {
             const data = snapshot.val();
             
+            // 关键逻辑修改：
+            // 只有当数据库里没数据，或者数据库里的 ID 确实是本设备发起的（通过 localStorage 校验），才执行 UI 锁定
             if (!data || data.status === 'completed') {
                 if (id === savedLinea) localStorage.removeItem('myActiveCall');
                 resetUI();
             } else {
+                // 如果是本设备发起的，或者是本设备之前存过的，才锁定界面
                 if (id === savedLinea) {
                     lineaInput.disabled = true; 
                     causaleSelect.disabled = true;
@@ -173,6 +158,7 @@
                         btnIcon.innerText = "⚙️";
                     }
                 } else {
+                    // 如果输错了线号（输成了别人的），虽然数据库有数据，但我们不锁定界面，只维持“可呼叫”状态
                     resetUI();
                 }
             }
@@ -204,13 +190,14 @@
                 return; 
             }
 
+            // 发起呼叫，并记录本设备发起的 ID
             db.ref('active_calls/' + id).set({
                 startA: Date.now(),
                 status: 'orange',
                 causale: causale,
                 turno: currentTurno
             }).then(() => {
-                localStorage.setItem('myActiveCall', id); 
+                localStorage.setItem('myActiveCall', id); // 记录是本设备发起的任务
                 startListening();
                 
                 const tKey = currentTurno.replace(" ", "_");
@@ -226,18 +213,14 @@
         });
     }
 
-    // 初始化增强：优先获取活跃任务线号，如果没有，则获取上次保存的普通线号
+    // 初始化：如果之前有发起的任务没结束，继续监听
     const lastActive = localStorage.getItem('myActiveCall');
-    const lastSaved = localStorage.getItem('saved_linea_num');
-    
     if(lastActive) {
         lineaInput.value = lastActive;
         startListening();
-    } else if(lastSaved) {
-        lineaInput.value = lastSaved;
-        startListening();
     }
     
+    // 输入框离开焦点时只进行简单的监听切换，不锁定 UI
     lineaInput.addEventListener('blur', startListening);
 
     setInterval(() => { if (db) { db.goOffline(); db.goOnline(); } }, 300000);
