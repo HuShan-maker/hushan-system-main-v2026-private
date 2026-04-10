@@ -129,6 +129,7 @@
     let dayHistory = JSON.parse(localStorage.getItem('c_days_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
+    let lastCheckDay = new Date().toLocaleDateString('it-IT'); // 记录当前日期
 
     function autoCleanOldRecords() {
         const thirtyDaysAgo = new Date();
@@ -163,8 +164,26 @@
     }
 
     function updateHeaderTurno() {
+        const now = new Date();
+        const today = now.toLocaleDateString('it-IT');
+        
+        // 核心逻辑：检测日期变更（0点）
+        if (today !== lastCheckDay) {
+            forceClearAllActive(); // 强制清空
+            lastCheckDay = today;
+        }
+        
         document.getElementById('turnoDisp').innerText = getRealTimeTurno();
     }
+
+    function forceClearAllActive() {
+        Object.keys(cloudData).forEach(id => {
+            const item = cloudData[id];
+            const manualItem = { ...item, status: 'completed', endT: Date.now(), causale: "Chiusura fine giornata" };
+            archiveTask(id, manualItem);
+        });
+    }
+
     updateHeaderTurno();
     setInterval(updateHeaderTurno, 60000);
 
