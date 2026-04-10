@@ -448,7 +448,7 @@
         }
     }
 
-    function switchPiano(p, dir='left') { if(p===curPiano) return; const gd = document.getElementById('g'); gd.className = (dir==='left' ? 'slide-left' : 'right'); setTimeout(() => { curPiano = p; applyTheme(); gd.className = ''; }, 150); }
+    function switchPiano(p, dir='left') { if(p===curPiano) return; const gd = document.getElementById('g'); gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); setTimeout(() => { curPiano = p; applyTheme(); gd.className = ''; }, 150); }
     function applyTheme() { 
         const c=themeConfig[curPiano]; 
         document.querySelectorAll('.p-btn').forEach((b,i)=>{ 
