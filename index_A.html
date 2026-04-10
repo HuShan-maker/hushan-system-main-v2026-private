@@ -112,8 +112,7 @@
     const causaleSelect = document.getElementById('causaleSelect');
     const turnoLabel = document.getElementById('turnoLabel');
 
-    let isLocalAction = false; 
-    let lastKnownStatus = null; // 新增：用于记录上一个状态
+    let lastKnownStatus = null; 
 
     function getActiveTurno() {
         const now = new Date();
@@ -141,16 +140,17 @@
             if (!data || data.status === 'completed') {
                 if (id === savedLinea) {
                     localStorage.removeItem('myActiveCall');
-                    // 核心修改：只有当上一个状态是红色(red)或正在完成(finishing)时，才重置Causale
+                    // 核心逻辑：只有当前一个状态是红色维修（red）或结束中（finishing）时，数据消失才重置 Causale
+                    // 这涵盖了 B端正常完成 和 C端强制中止 两种情况
                     if (lastKnownStatus === 'red' || lastKnownStatus === 'finishing') {
                         causaleSelect.value = ""; 
                     }
                 }
-                lastKnownStatus = null; // 重置追踪状态
+                lastKnownStatus = null; 
                 resetUI();
             } else {
                 if (id === savedLinea) {
-                    lastKnownStatus = data.status; // 记录当前状态
+                    lastKnownStatus = data.status; // 实时更新状态追踪
                     lineaInput.disabled = true; 
                     causaleSelect.disabled = true;
                     
