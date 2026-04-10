@@ -115,14 +115,23 @@
     let lastKnownStatus = null; 
 
     function getActiveTurno() {
-        const now = new Date();
-        const hour = now.getHours() + (now.getMinutes() / 60);
-        const start = new Date(now.getFullYear(), 0, 1);
-        const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
-        const isSingleWeek = week % 2 !== 0; 
-        const isAfternoon = (hour >= 14.25); 
-        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
-    }
+    const now = new Date();
+    const hour = now.getHours() + (now.getMinutes() / 60);
+    
+    // 设定基准日期：2025年12月29日（2026年第1周的周一）
+    const baseDate = new Date(2025, 11, 29); 
+    
+    // 计算总周数（绝对累加，不受跨年重置影响）
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const totalWeeks = Math.floor((now - baseDate) / msPerWeek) + 1;
+
+    // 奇数周下午是 A，双数周下午是 B
+    const isSingleWeek = totalWeeks % 2 !== 0; 
+    const isAfternoon = (hour >= 14.25); 
+
+    return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
+}
+
 
     function updateShift() { turnoLabel.innerText = getActiveTurno(); }
     updateShift(); setInterval(updateShift, 60000);
