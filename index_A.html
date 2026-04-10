@@ -112,7 +112,7 @@
     const causaleSelect = document.getElementById('causaleSelect');
     const turnoLabel = document.getElementById('turnoLabel');
 
-    let isLocalAction = false; 
+    let isLocalAction = false; // 标记是否是本设备发起的呼叫
 
     function getActiveTurno() {
         const now = new Date();
@@ -131,16 +131,19 @@
         const id = lineaInput.value.trim().toLowerCase();
         if(!id) return;
         
-        const savedLinea = localStorage.getItem('myActiveCall'); 
+        const savedLinea = localStorage.getItem('myActiveCall'); // 获取本设备发起的活跃线号
         
         db.ref('active_calls/' + id).off();
         db.ref('active_calls/' + id).on('value', (snapshot) => {
             const data = snapshot.val();
             
+            // 关键逻辑修改：
+            // 只有当数据库里没数据，或者数据库里的 ID 确实是本设备发起的（通过 localStorage 校验），才执行 UI 锁定
             if (!data || data.status === 'completed') {
                 if (id === savedLinea) localStorage.removeItem('myActiveCall');
                 resetUI();
             } else {
+                // 如果是本设备发起的，或者是本设备之前存过的，才锁定界面
                 if (id === savedLinea) {
                     lineaInput.disabled = true; 
                     causaleSelect.disabled = true;
@@ -155,6 +158,7 @@
                         btnIcon.innerText = "⚙️";
                     }
                 } else {
+                    // 如果输错了线号（输成了别人的），虽然数据库有数据，但我们不锁定界面，只维持“可呼叫”状态
                     resetUI();
                 }
             }
@@ -182,17 +186,18 @@
 
         db.ref('active_calls/' + id).once('value').then((snapshot) => {
             if (snapshot.exists() && snapshot.val().status !== 'completed') {
-                alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già stata chiamata da un altro operatoratore!");
+                alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già stata chiamata da un altro operatore!");
                 return; 
             }
 
+            // 发起呼叫，并记录本设备发起的 ID
             db.ref('active_calls/' + id).set({
                 startA: Date.now(),
                 status: 'orange',
                 causale: causale,
                 turno: currentTurno
             }).then(() => {
-                localStorage.setItem('myActiveCall', id); 
+                localStorage.setItem('myActiveCall', id); // 记录是本设备发起的任务
                 startListening();
                 
                 const tKey = currentTurno.replace(" ", "_");
@@ -208,12 +213,14 @@
         });
     }
 
+    // 初始化：如果之前有发起的任务没结束，继续监听
     const lastActive = localStorage.getItem('myActiveCall');
     if(lastActive) {
         lineaInput.value = lastActive;
         startListening();
     }
     
+    // 输入框离开焦点时只进行简单的监听切换，不锁定 UI
     lineaInput.addEventListener('blur', startListening);
 
     setInterval(() => { if (db) { db.goOffline(); db.goOnline(); } }, 300000);
