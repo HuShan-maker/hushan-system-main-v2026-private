@@ -262,7 +262,7 @@
             
             const card = document.createElement('div');
             card.className = `card st-${statusKey}`;
-            if(!item.isLocal && item.status === 'orange' && waitMin > 15) card.classList.add('timeout-critical');
+            if(!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
 
             card.innerHTML = `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA}, ${item.isLocal}, '${item.status}')">×</div>
                 <div class="card-left">
