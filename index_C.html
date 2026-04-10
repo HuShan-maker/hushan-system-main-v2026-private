@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Controllo Side v8</title>
+    <title>C - Controllo Side v8.1</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -129,7 +129,6 @@
     let dayHistory = JSON.parse(localStorage.getItem('c_days_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
-    let lastCheckDay = new Date().toLocaleDateString('it-IT'); // 记录当前日期
 
     function autoCleanOldRecords() {
         const thirtyDaysAgo = new Date();
@@ -164,26 +163,8 @@
     }
 
     function updateHeaderTurno() {
-        const now = new Date();
-        const today = now.toLocaleDateString('it-IT');
-        
-        // 核心逻辑：检测日期变更（0点）
-        if (today !== lastCheckDay) {
-            forceClearAllActive(); // 强制清空
-            lastCheckDay = today;
-        }
-        
         document.getElementById('turnoDisp').innerText = getRealTimeTurno();
     }
-
-    function forceClearAllActive() {
-        Object.keys(cloudData).forEach(id => {
-            const item = cloudData[id];
-            const manualItem = { ...item, status: 'completed', endT: Date.now(), causale: "Chiusura fine giornata" };
-            archiveTask(id, manualItem);
-        });
-    }
-
     updateHeaderTurno();
     setInterval(updateHeaderTurno, 60000);
 
@@ -244,13 +225,19 @@
         const now = Date.now();
         const todayStr = new Date().toLocaleDateString('it-IT');
 
+        // 只显示今天开始的记录（已完成记录）
         const localToDisplay = logs.filter(l => l.day === todayStr && !l.hideFromBoard).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, 
             causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true,
             sortTime: l.et || l.st, startTimeStr: l.s
         }));
 
-        const cloudItems = Object.keys(cloudData).map(id => {
+        // 处理云端数据：只显示今天开始的任务（正在进行的）
+        const cloudItems = Object.keys(cloudData).filter(id => {
+            const item = cloudData[id];
+            const itemDay = new Date(item.startA).toLocaleDateString('it-IT');
+            return itemDay === todayStr; // 核心过滤：非今天的任务不显示在主页
+        }).map(id => {
             const item = cloudData[id];
             return { 
                 id: id, ...item, isLocal: false, 
@@ -341,15 +328,20 @@
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
             const isToday = (day === todayStr);
             const section = document.createElement('div');
+            
+            // 核心修改：如果是今天，则默认显示 block，否则隐藏 none
+            const displayStyle = isToday ? 'block' : 'none';
+            const arrowIcon = isToday ? '▼' : '▶';
+
             section.innerHTML = `
                 <div class="day-header" onclick="toggleDay(this)">
                     <div>
                         <span style="color:var(--red); margin-right:12px;" onclick="deleteDay(event, '${day}')">×</span>
                         <span>${day} ${isToday ? '(OGGI)' : ''}</span>
                     </div>
-                    <span class="arrow-icon">${isToday ? '▼' : '▶'}</span>
+                    <span class="arrow-icon">${arrowIcon}</span>
                 </div>
-                <div class="day-content" style="display: ${isToday ? 'block' : 'none'}">
+                <div class="day-content" style="display: ${displayStyle}">
                     <table>
                         <thead>
                             <tr>
