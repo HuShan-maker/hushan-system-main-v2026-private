@@ -72,7 +72,8 @@
 
     <div class="input-container">
         <div class="linea-row">
-            <input type="text" id="lineaInput" placeholder="NO." autocomplete="off">
+            <!-- 加入了 onchange 自动保存线号的逻辑 -->
+            <input type="text" id="lineaInput" placeholder="NO." autocomplete="off" onchange="localStorage.setItem('saved_linea_num', this.value)">
             <div class="turno-tag" id="turnoLabel">TURNO --</div>
         </div>
         
@@ -102,13 +103,11 @@
         const savedVersion = localStorage.getItem('app_installed_version');
         if (savedVersion !== APP_VERSION) {
             localStorage.setItem('app_installed_version', APP_VERSION);
-            // 强行清理 Service Worker 注册信息（如果存在）
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(regs => {
                     for(let reg of regs) reg.unregister();
                 });
             }
-            // 强制从服务器重载所有资源
             window.location.reload(true);
         }
     })();
@@ -227,9 +226,15 @@
         });
     }
 
+    // 初始化增强：优先获取活跃任务线号，如果没有，则获取上次保存的普通线号
     const lastActive = localStorage.getItem('myActiveCall');
+    const lastSaved = localStorage.getItem('saved_linea_num');
+    
     if(lastActive) {
         lineaInput.value = lastActive;
+        startListening();
+    } else if(lastSaved) {
+        lineaInput.value = lastSaved;
         startListening();
     }
     
