@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>A - Operatori v8</title>
+    <title>A - Operator Side v8.1</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -148,19 +148,24 @@
                 lastKnownStatus = null; 
                 resetUI();
             } else {
-                // 如果当前线号正在呼叫，则进入锁定状态（不论是否本设备发起）
-                lastKnownStatus = data.status; 
-                lineaInput.disabled = true; 
-                causaleSelect.disabled = true;
-                
-                if (data.status === 'orange') {
-                    mainBtn.className = "main-btn status-orange locked";
-                    statusText.innerText = "IN ATTESA...";
-                    btnIcon.innerText = "⏳";
-                } else if (data.status === 'red' || data.status === 'finishing') {
-                    mainBtn.className = "main-btn status-red locked";
-                    statusText.innerText = "INTERVENTO IN CORSO...";
-                    btnIcon.innerText = "⚙️";
+                // BUG 修复核心逻辑：只有当该线号等于本设备保存的活跃呼叫时，才锁定 UI
+                if (id === savedLinea) {
+                    lastKnownStatus = data.status; 
+                    lineaInput.disabled = true; 
+                    causaleSelect.disabled = true;
+                    
+                    if (data.status === 'orange') {
+                        mainBtn.className = "main-btn status-orange locked";
+                        statusText.innerText = "IN ATTESA...";
+                        btnIcon.innerText = "⏳";
+                    } else if (data.status === 'red' || data.status === 'finishing') {
+                        mainBtn.className = "main-btn status-red locked";
+                        statusText.innerText = "INTERVENTO IN CORSO...";
+                        btnIcon.innerText = "⚙️";
+                    }
+                } else {
+                    // 如果输入的线号虽然在云端有呼叫，但不是本设备发起的，保持 UI 开启，允许修改
+                    resetUI();
                 }
             }
         });
@@ -219,13 +224,14 @@
         lineaInput.value = persistentLinea;
     }
 
-    // 如果该线号有正在进行的呼叫，自动进入监听锁定状态
+    // 只有当本地存储中有活跃呼叫记录时，才启动监听并可能锁定 UI
     const lastActive = localStorage.getItem('myActiveCall');
     if(lastActive) {
         lineaInput.value = lastActive;
         startListening();
-    } else if(lineaInput.value) {
-        startListening(); // 即使没在呼叫，也尝试开启一次监听以防万一
+    } else {
+        // 初始状态下不锁定，但如果线号存在，确保监听逻辑已准备好
+        startListening();
     }
     
     lineaInput.addEventListener('blur', startListening);
