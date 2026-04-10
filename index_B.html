@@ -183,16 +183,27 @@
     });
 
     // --- 2. 班次逻辑 (基于服务器时间) ---
+        // --- 2. 班次逻辑 (基于总周数累加，确保跨年自动衔接) ---
     function getRealTimeTurno() {
         // 使用本地时间校准后的真实时间
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
-        const start = new Date(now.getFullYear(), 0, 1);
-        const week = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
-        const isSingleWeek = week % 2 !== 0; 
+        
+        // 设定基准日期：2025年12月29日（2026年第1周的周一）
+        const baseDate = new Date(2025, 11, 29); 
+        
+        // 计算从基准点到现在一共过去了多少毫秒，换算成绝对累加的周数
+        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+        const totalWeeks = Math.floor((now - baseDate) / msPerWeek) + 1;
+
+        // 根据总周数的奇偶性判定
+        const isSingleWeek = totalWeeks % 2 !== 0; 
         const isAfternoon = (hour >= 14.25); 
+
+        // 班次判定逻辑：单数周下午是 A，双数周下午是 B
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
+
 
     let myShift = localStorage.getItem('deviceShift') || "";
     if (!myShift) {
