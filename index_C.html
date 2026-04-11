@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Tabellone v8.7.4</title>
+    <title>C - Tabellone v8.7.6</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -21,7 +21,6 @@
         }
 
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-shrink: 0; }
-        /* 标题：STATO INTERVENTI */
         .title-area h1 { font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
         
         .turno-badge { 
@@ -65,7 +64,8 @@
         .v-nav { display: flex; align-items: center; justify-content: space-between; height: 55px; padding: 0 20px; border-bottom: 1px solid #f2f2f7; flex-shrink: 0; }
         #logContainer, #feedbackContainer { flex: 1; overflow-y: auto; padding: 15px; }
         
-        .fb-card { background: #f9f9fb; border-radius: 18px; padding: 15px; margin-bottom: 15px; border-left: 5px solid var(--black); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        /* 修正后的反馈卡片样式：黑色细边框，全面包围 */
+        .fb-card { background: #f9f9fb; border-radius: 18px; padding: 15px; margin-bottom: 15px; border: 1.5px solid var(--black); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
         .fb-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .fb-name { font-size: 15px; font-weight: 800; color: var(--black); }
         .fb-score { font-size: 12px; font-weight: 700; color: var(--orange); }
@@ -306,7 +306,7 @@
 
             if (isAnnulato) {
                 card.innerHTML = `<div class="card-left"><div class="card-linea" style="font-size: 18px; color: var(--text-sec);">${item.id}</div></div>
-                    <div class="card-center" style="border:none; text-align: center;"><div style="font-size: 11px; font-weight: 700; color: var(--text-sec);">ANNULATO</div></div>
+                    <div class="card-center" style="border:none; text-align: center;"><div style="font-size: 11px; font-weight: 700; color: var(--text-sec);">ANNULLATO DA OPERATORE</div></div>
                     <div class="card-right" style="min-width: 50px;"><div style="font-size: 10px; color: var(--text-sec);">${item.startTimeStr}</div></div>`;
             } else {
                 card.innerHTML = `<div class="card-left"><div class="card-badge bg-${colorClass}">${statusLabel}</div><div class="card-linea">${item.id}</div></div>
@@ -355,7 +355,9 @@
                         <thead><tr><th style="width:18%">LINEA</th><th style="width:13%">ATTESA</th><th style="width:13%">DURATA</th><th style="width:36%">CAUSALE</th><th style="width:20%">NOME</th></tr></thead>
                         <tbody>${dayLogs.map(l => {
                             const isAnn = String(l.c).includes("ANNULATO");
-                            return `<tr><td><b>${l.i}</b></td><td>${isAnn ? '-' : l.tA+'m'}</td><td>${isAnn ? '-' : l.tD+'m'}</td><td style="font-size:9px">${l.c}</td><td class="tech-cell">${l.tech || '-'}</td></tr>`
+                            return `<tr><td><b>${l.i}</b></td><td>${isAnn ? '-' : l.tA+'m'}</td><td>${isAnn ? '-' : l.tD+'m'}</td>
+                            <td style="font-size:9px">${l.c}<br><span style="color:#8e8e93; font-size:8px;">[${l.t || '-'}]</span></td>
+                            <td class="tech-cell">${l.tech || '-'}</td></tr>`
                         }).join('')}</tbody>
                     </table>
                 </div>`;
