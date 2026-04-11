@@ -6,119 +6,105 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>LINK DIRETTO-A v8.5.8</title>
+    <title>Link Diretto - A v8.5.9</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        :root { --bg: #ffffff; --orange: #ff9500; --red: #ff3b30; --gray: #f2f2f7; --black: #000000; }
+        :root { --bg: #f8f9fa; --orange: #ff9500; --red: #ff3b30; --gray: #f2f2f7; --black: #000000; --blue: #007aff; }
         * { -webkit-user-select: none; user-select: none; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             font-family: -apple-system, sans-serif; background: var(--bg); 
             margin: 0; display: flex; flex-direction: column; 
-            height: 100vh; width: 100vw; overflow: hidden;
-            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+            height: 100vh; overflow: hidden;
+            padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
         }
 
-        /* 顶部区域：固定在上方 */
-        .header { 
-            width: 100%; text-align: center; padding: 20px 0 10px 0; flex-shrink: 0; 
+        .container {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 20px; width: 100%; max-width: 400px; margin: 0 auto;
         }
+
+        .header { text-align: center; margin-bottom: 5px; }
         h1 { font-size: 18px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 1px; color: var(--black); }
 
-        /* 灰色反馈按钮：与标题保持距离 */
+        /* 灰色反馈按钮 */
         .feedback-entry-btn {
-            background: var(--gray); color: var(--black); border: none; padding: 8px 18px;
-            border-radius: 12px; font-size: 11px; font-weight: 800; margin-top: 12px;
-            text-transform: uppercase; letter-spacing: 0.5px;
+            background: var(--gray); color: var(--black); border: none; padding: 6px 16px;
+            border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 10px;
+            text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s;
+        }
+        .feedback-entry-btn:active { transform: scale(0.95); opacity: 0.8; }
+
+        /* 调整输入区域：宽度设为 260px 与大按钮一致 */
+        .input-card { 
+            background: #fff; padding: 20px; border-radius: 25px; width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 15px;
         }
 
-        /* 中间核心区：占据剩余空间并垂直居中 */
-        .main-content {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 25px; width: 100%;
-        }
-
-        /* 输入组合框：宽度严格限制在 260px */
-        .input-group { 
-            width: 260px; display: flex; flex-direction: column; gap: 12px;
-        }
-
-        .linea-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
-        
+        .linea-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
         input { 
-            flex: 1; height: 55px; border-radius: 18px; 
-            border: 3px solid var(--gray); font-size: 26px; font-weight: 900; 
+            width: 100px; padding: 12px; border-radius: 15px; 
+            border: 3px solid #f2f2f7; font-size: 24px; font-weight: 900; 
             text-align: center; outline: none; background: #fff;
             -webkit-user-select: text; user-select: text; 
         }
         input:disabled { background-color: #f9f9fb; color: #8e8e93; border-color: #e5e5ea; opacity: 1; }
 
-        .turno-tag { 
-            height: 55px; padding: 0 15px; border-radius: 18px;
-            background: var(--gray); color: #8e8e93; 
-            font-size: 12px; font-weight: 800; text-transform: uppercase;
-            display: flex; align-items: center; justify-content: center;
-        }
+        .turno-tag { font-size: 11px; font-weight: 800; color: #8e8e93; text-transform: uppercase; background: #f2f2f7; padding: 6px 12px; border-radius: 10px; }
 
         #causaleSelect {
-            width: 100%; height: 50px; border-radius: 15px;
-            border: none; background: var(--gray); font-size: 14px;
-            font-weight: 800; color: #3a3a3c; outline: none;
-            cursor: pointer; text-align-last: center; /* 文字居中 */
+            width: 100%; padding: 14px; border-radius: 12px;
+            border: none; background: #f2f2f7; font-size: 14px;
+            font-weight: 700; color: #3a3a3c; outline: none;
+            cursor: pointer; text-align: center; -webkit-appearance: none;
         }
 
-        /* 呼叫大按钮：宽度 260px */
         .main-btn {
             width: 260px; height: 260px; border-radius: 50px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: none;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.06); cursor: pointer;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); cursor: pointer;
         }
 
-        .status-none { background: #fff; border: 4px solid var(--gray); color: #000; }
+        .status-none { background: #fff; border: 4px solid #f2f2f7; color: #000; }
         .status-orange { background: var(--orange); color: #fff; animation: pulse 1.5s infinite; }
         .status-red { background: var(--red); color: #fff; }
         .locked { pointer-events: none; transform: scale(0.97); opacity: 0.9; }
 
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
 
-        .btn-icon { font-size: 65px; margin-bottom: 12px; }
-        .btn-text { font-size: 16px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 25px; line-height: 1.2; }
+        .btn-icon { font-size: 60px; margin-bottom: 10px; }
+        .btn-text { font-size: 15px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 25px; line-height: 1.2; }
 
         #cancelBtn {
-            margin-top: 5px; background: #fff; border: 2px solid #e5e5ea;
+            margin-top: 15px; background: #fff; border: 2px solid #e5e5ea;
             color: #8e8e93; font-size: 13px; font-weight: 800; text-transform: uppercase;
             padding: 12px 30px; border-radius: 15px; display: none;
         }
         
-        /* 底部页脚：固定在最下方 */
-        .footer {
-            width: 100%; text-align: center; padding: 15px 0; flex-shrink: 0;
-            font-size: 10px; font-weight: 800; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px;
-        }
-
-        /* 模态框 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
         .modal-content { background: #fff; width: 90%; max-width: 340px; border-radius: 30px; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
         .modal-h2 { font-size: 18px; font-weight: 900; text-align: center; margin: 0; color: var(--black); }
         .f-label { font-size: 11px; font-weight: 800; color: #8e8e93; margin-bottom: -10px; margin-left: 5px; text-transform: uppercase; }
-        .f-select, .f-textarea, .f-input { width: 100%; padding: 12px; border-radius: 12px; border: 2px solid var(--gray); font-size: 15px; font-weight: 700; outline: none; }
+        .f-select, .f-textarea, .f-input { width: 100%; padding: 12px; border-radius: 12px; border: 2px solid #f2f2f7; font-size: 15px; font-weight: 700; outline: none; -webkit-user-select: text; user-select: text; }
         .f-submit { background: var(--black); color: white; border: none; padding: 15px; border-radius: 15px; font-weight: 800; font-size: 14px; margin-top: 10px; }
         .f-close { color: #8e8e93; font-size: 12px; font-weight: 700; text-align: center; margin-top: 5px; }
+
+        .copy-text { font-size: 10px; font-weight: 800; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; padding: 20px 0; text-align: center; width: 100%; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>LINK DIRETTO-A</h1>
-        <button class="feedback-entry-btn" onclick="handleFeedbackOpen()">🎓 Crescita Tecnica</button>
-    </div>
+    <div class="container">
+        <div class="header">
+            <h1>Link Diretto</h1>
+            <button class="feedback-entry-btn" onclick="handleFeedbackOpen()">🎓 Crescita Tecnica</button>
+        </div>
 
-    <div class="main-content">
-        <div class="input-group">
+        <div class="input-card">
             <div class="linea-row">
                 <input type="text" id="lineaInput" placeholder="NO." autocomplete="off" oninput="localStorage.setItem('persistentLinea', this.value)">
                 <div class="turno-tag" id="turnoLabel">--</div>
@@ -136,15 +122,16 @@
             </select>
         </div>
 
-        <button id="mainBtn" class="main-btn status-none" onclick="sendCall()">
-            <div id="btnIcon" class="btn-icon">⚡️</div>
-            <div id="statusText" class="btn-text">Chiamare Attrezzista</div>
-        </button>
-        
-        <button id="cancelBtn" onclick="cancelCall()">Annulla Chiamata</button>
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <button id="mainBtn" class="main-btn status-none" onclick="sendCall()">
+                <div id="btnIcon" class="btn-icon">⚡️</div>
+                <div id="statusText" class="btn-text">Chiamare Attrezzista</div>
+            </button>
+            <button id="cancelBtn" onclick="cancelCall()">Annulla Chiamata</button>
+        </div>
     </div>
 
-    <div class="footer">© <span id="curYear"></span> HU SHAN · ALL RIGHTS RESERVED</div>
+    <div class="copy-text">© <span id="curYear"></span> HU SHAN · ALL RIGHTS RESERVED</div>
 
     <div id="fModal" class="modal">
         <div class="modal-content">
@@ -200,6 +187,7 @@
         const score = document.getElementById('fScore').value;
         const note = document.getElementById('fNote').value;
         if(!score || score < 1 || score > 5) { alert("Inserisci un punteggio tra 1 e 5!"); return; }
+        
         db.ref('feedback_crescita').push({
             attrezzista: name, punteggio: score, messaggio: note,
             timestamp: Date.now(), linea: lineaInput.value || "N/A", data: new Date().toLocaleDateString('it-IT')
@@ -216,8 +204,8 @@
         const baseDate = new Date(2025, 11, 29); 
         const msPerWeek = 7 * 24 * 60 * 60 * 1000;
         const totalWeeks = Math.floor((now - baseDate) / msPerWeek) + 1;
-        const isAfternoon = (hour >= 14.25); 
         const isSingleWeek = totalWeeks % 2 !== 0; 
+        const isAfternoon = (hour >= 14.25); 
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
@@ -262,15 +250,18 @@
         const regex = /^[1-5]0[1-8](bis)?$/;
         if(!regex.test(id)) { alert("LINEA ERRATA!"); return; }
         if(!causale) { alert("SELEZIONA UNA CAUSALE!"); return; }
+        
         db.ref('active_calls/' + id).once('value').then((snapshot) => {
             if (snapshot.exists() && snapshot.val().status !== 'completed') {
-                alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già attiva!"); return; 
+                alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già attiva!");
+                return; 
             }
             const currentTurno = getActiveTurno();
             db.ref('active_calls/' + id).set({
                 startA: Date.now(), status: 'orange', causale: causale, turno: currentTurno
             }).then(() => {
-                localStorage.setItem('myActiveCall', id); startListening();
+                localStorage.setItem('myActiveCall', id);
+                startListening();
                 const tKey = currentTurno.replace(" ", "_");
                 db.ref('tokens/' + tKey).once('value', (snap) => {
                     const tokens = snap.val() || {};
@@ -287,15 +278,24 @@
     function cancelCall() {
         const id = localStorage.getItem('myActiveCall');
         if (!id || !confirm("Annullare la chiamata per linea " + id.toUpperCase() + "?")) return;
-        db.ref('active_calls/' + id).update({ status: 'completed', endT: Date.now(), causale: "ANNULATO DA OPERATORE" })
-        .then(() => { localStorage.removeItem('myActiveCall'); resetUI(); });
+        db.ref('active_calls/' + id).update({
+            status: 'completed',
+            endT: Date.now(),
+            causale: "ANNULATO DA OPERATORE"
+        }).then(() => {
+            localStorage.removeItem('myActiveCall');
+            resetUI();
+        });
     }
 
     document.getElementById('curYear').innerText = new Date().getFullYear();
     const pLinea = localStorage.getItem('persistentLinea');
     if(pLinea) lineaInput.value = pLinea;
     const lastActive = localStorage.getItem('myActiveCall');
-    if(lastActive) { lineaInput.value = lastActive; startListening(); } else { startListening(); }
+    if(lastActive) {
+        lineaInput.value = lastActive;
+        startListening();
+    } else { startListening(); }
     lineaInput.addEventListener('blur', startListening);
 </script>
 </body>
