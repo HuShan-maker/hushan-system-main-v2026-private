@@ -120,7 +120,7 @@
 
     <div class="h">
         <div class="title-group">
-            <h2>OPERATORE <span id="turnoDisp" class="turno-badge">--</span></h2>
+            <h2>ATTREZZISTA <span id="turnoDisp" class="turno-badge">--</span></h2>
             <div id="userNameDisp" class="user-subtitle" onclick="handleNameClick()">Hu_Shan</div>
         </div>
         <button class="reg-btn" onclick="showMemoria()">registro</button>
@@ -141,7 +141,6 @@
 
     <div class="color-picker-wrap" id="pickerContainer"><input type="color" id="floorColor" onchange="updateThemeColor(this.value)"></div>
 
-    <!-- Modals -->
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
     <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Attività svolta..."><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
     <div id="editModal"><div class="modal-content"><h3>Modifica Causale</h3><input type="text" id="editCausaleInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
@@ -182,8 +181,7 @@
         serverTimeOffset = snap.val() || 0;
     });
 
-    // --- 2. 班次逻辑 (基于服务器时间) ---
-        // --- 2. 班次逻辑 (基于总周数累加，确保跨年自动衔接) ---
+    // --- 2. 班次逻辑 (基于总周数累加，确保跨年自动衔接) ---
     function getRealTimeTurno() {
         // 使用本地时间校准后的真实时间
         const now = new Date(Date.now() + serverTimeOffset);
