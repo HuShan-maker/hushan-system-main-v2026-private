@@ -391,7 +391,7 @@
     }
 
     function clearAll() {
-        if(!confirm("Svuota tutto l'archivio?")) return;
+        if(!confirm("Cancellare tutti i dati dell'archivio?")) return;
         logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs(); renderCombinedCards();
     }
 
