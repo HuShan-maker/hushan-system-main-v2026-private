@@ -19,7 +19,7 @@ Sappiamo che molti si preoccupano per i propri dati personali. Ecco la verità:
 ### ⚒️ Come funziona il Sistema
 
 #### **A: Per l'Operaio (Richiesta)**
-Non serve più urlare o girare per il reparto a cercare qualcuno.
+Non serve più urlare o girare per il reparto a cercare un attrezzista.
 * Scegli la linea e il problema.
 * Premi il tasto: l'avviso arriva istantaneo sul telefono dell'attrezzista.
 * Risparmia tempo e fatica ogni giorno.
