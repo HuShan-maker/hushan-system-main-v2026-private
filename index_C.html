@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Controllo Side v8.2</title>
+    <title>C - Controllo Side v8.3</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -43,15 +43,8 @@
         .card.st-waiting { border-color: var(--orange); }
         .card.st-working { border-color: var(--red); }
         .card.st-completed { border-color: var(--black); }
-
-        .card-del {
-            position: absolute; top: -8px; right: -8px; 
-            width: 24px; height: 24px; background: var(--red); 
-            color: white; border-radius: 50%; border: 2px solid white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: 700; cursor: pointer; z-index: 20;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+        /* 取消任务的特殊样式：更细 */
+        .card.st-annulato { min-height: 50px; background: #fafafa; border-color: #e5e5ea; opacity: 0.8; }
 
         .card-left { display: flex; flex-direction: column; gap: 6px; flex: 0.7; min-width: 80px; justify-content: center; align-items: flex-start; }
         .card-badge { font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; color: #fff; letter-spacing: 0.3px; white-space: nowrap; }
@@ -169,12 +162,9 @@
     function updateHeaderTurno() {
         const now = new Date();
         const today = now.toLocaleDateString('it-IT');
-        
-        // 0点清空主页过滤用的逻辑（不杀掉A端活跃呼叫）
         if (today !== lastCheckDay) {
             lastCheckDay = today;
         }
-        
         document.getElementById('turnoDisp').innerText = getRealTimeTurno();
     }
 
@@ -257,8 +247,17 @@
             };
         });
 
+        // --- 排序逻辑：超时优先 -> 正常时间 -> 取消(ANNULATO)垫底 ---
         const all = [...localToDisplay, ...cloudItems].sort((a, b) => {
             const nowTime = Date.now();
+            const aIsAnnulato = String(a.causale).includes("ANNULATO");
+            const bIsAnnulato = String(b.causale).includes("ANNULATO");
+
+            // 1. 如果其中一个是取消，取消的排在后面
+            if (aIsAnnulato && !bIsAnnulato) return 1;
+            if (!aIsAnnulato && bIsAnnulato) return -1;
+
+            // 2. 正常呼叫的内部排序
             const aIsTimeout = (!a.isLocal && a.status === 'orange' && Math.round((nowTime - a.startA) / 60000) >= 15);
             const bIsTimeout = (!b.isLocal && b.status === 'orange' && Math.round((nowTime - b.startA) / 60000) >= 15);
 
@@ -269,6 +268,8 @@
         });
 
         all.forEach(item => {
+            const isAnnulato = String(item.causale).includes("ANNULATO");
+            
             let waitMin = item.isLocal ? item.tA : (item.startB ? Math.round((item.startB-item.startA)/60000) : Math.round((now-item.startA)/60000));
             let workMin = item.isLocal ? item.tD : (item.startB ? Math.round((now-item.startB)/60000) : 0);
             let totalMin = waitMin + workMin;
@@ -279,30 +280,50 @@
             else { statusLabel = 'FINE'; colorClass = 'black'; statusKey = 'completed'; }
             
             const card = document.createElement('div');
-            card.className = `card st-${statusKey}`;
+            // 如果是取消，加入特殊的 css 类
+            card.className = `card st-${isAnnulato ? 'annulato' : statusKey}`;
+            
             if(!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
 
-            card.innerHTML = `<div class="card-del" onclick="handleManualDel('${item.id}', ${item.startA}, ${item.isLocal}, '${item.status}')">×</div>
-                <div class="card-left">
-                    <div class="card-badge bg-${colorClass}">${statusLabel}</div>
-                    <div class="card-linea">${item.id}</div>
-                </div>
-                <div class="card-center">
-                    <div class="card-stats">
-                        Inizio: <b>${item.startTimeStr}</b><br>
-                        Attesa: <b>${waitMin}m</b> | Durata: <b>${workMin}m</b><br>
-                        Causale: <b>${item.causale || "-"}</b><br>
-                        Tecnico: <b>${item.techName || item.takenBy || "-"}</b>
+            if (isAnnulato) {
+                // 取消任务的简化单行模板
+                card.innerHTML = `
+                    <div class="card-left">
+                        <div class="card-linea" style="font-size: 18px;">${item.id}</div>
                     </div>
-                </div>
-                <div class="card-right">
-                    <div class="total-label">Totale</div>
-                    <div class="total-val">${totalMin}m</div>
-                </div>`;
+                    <div class="card-center" style="border:none; text-align: center;">
+                        <div style="font-size: 11px; font-weight: 800; color: var(--text-sec); letter-spacing: 1px;">
+                            ANNULATO DA OPERATORE
+                        </div>
+                    </div>
+                    <div class="card-right" style="min-width: 50px;">
+                        <div style="font-size: 10px; font-weight: 700;">${item.startTimeStr}</div>
+                    </div>`;
+            } else {
+                // 正常任务模板（移除了删除按钮 card-del）
+                card.innerHTML = `
+                    <div class="card-left">
+                        <div class="card-badge bg-${colorClass}">${statusLabel}</div>
+                        <div class="card-linea">${item.id}</div>
+                    </div>
+                    <div class="card-center">
+                        <div class="card-stats">
+                            Inizio: <b>${item.startTimeStr}</b><br>
+                            Attesa: <b>${waitMin}m</b> | Durata: <b>${workMin}m</b><br>
+                            Causale: <b>${item.causale || "-"}</b><br>
+                            Tecnico: <b>${item.techName || item.takenBy || "-"}</b>
+                        </div>
+                    </div>
+                    <div class="card-right">
+                        <div class="total-label">Totale</div>
+                        <div class="total-val">${totalMin}m</div>
+                    </div>`;
+            }
             list.appendChild(card);
         });
     }
 
+    // handleManualDel 仅保留供历史记录调用，主页已移除入口
     function handleManualDel(id, st, isLocal, currentStatus) {
         const isUnfinished = (currentStatus === 'orange' || currentStatus === 'red' || currentStatus === 'finishing');
         if(!confirm(isUnfinished ? "Interrompere l'intervento?" : "Eliminare questa registrazione?")) return;
@@ -358,16 +379,18 @@
                                 <th style="width:20%" class="name-head">NOME</th>
                             </tr>
                         </thead>
-                        <tbody>${dayLogs.map(l => `<tr>
+                        <tbody>${dayLogs.map(l => {
+                            const isAnn = String(l.c).includes("ANNULATO");
+                            return `<tr>
                                 <td><b>${l.i}</b></td>
-                                <td>${l.tA}m</td>
-                                <td>${l.tD}m</td>
+                                <td>${isAnn ? '-' : l.tA + 'm'}</td>
+                                <td>${isAnn ? '-' : l.tD + 'm'}</td>
                                 <td style="font-size:9px">
-                                    ${l.c}<br>
+                                    ${isAnn ? '<span style="color:#8e8e93">ANNULATO</span>' : l.c}<br>
                                     <span style="color:#8e8e93; font-size:8px;">[${l.t || '-'}]</span>
                                 </td>
-                                <td class="tech-cell">${l.tech || '-'}</td>
-                            </tr>`).join('')}</tbody>
+                                <td class="tech-cell">${isAnn ? '-' : (l.tech || '-')}</td>
+                            </tr>`}).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
