@@ -1,7 +1,10 @@
-const CACHE_NAME = 'p3-fast-v19'; // 更新 index.html 后把 v10 改成 v11
+const CACHE_NAME = 'p3-fast-v20'; // 每次修改 HTML 后记得把 v19 改成 v20
 const ASSETS = [
   './',
   './index.html',
+  './index_A.html',
+  './index_B.html',
+  './index_C.html',
   './manifest.json',
   './icon.png'
 ];
