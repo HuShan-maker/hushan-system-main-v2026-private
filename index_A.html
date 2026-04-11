@@ -274,7 +274,7 @@
         if(!causale) { alert("SELEZIONA UNA CAUSALE!"); return; }
         db.ref('active_calls/' + id).once('value').then((snapshot) => {
             if (snapshot.exists() && snapshot.val().status !== 'completed') {
-                alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già activa!"); return; 
+                alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già attiva!"); return; 
             }
             const currentTurno = getActiveTurno();
             db.ref('active_calls/' + id).set({
