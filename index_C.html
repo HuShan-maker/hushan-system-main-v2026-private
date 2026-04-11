@@ -45,7 +45,6 @@
         .card.st-completed { border-color: var(--black); }
         .card.st-annulato { min-height: 55px !important; background: #fafafa; border-color: #e5e5ea; opacity: 0.8; }
 
-        /* 修改：确保容器垂直居中 */
         .card-left { 
             display: flex; 
             flex-direction: column; 
@@ -56,9 +55,7 @@
             align-items: flex-start; 
         }
         .card-badge { font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; color: #fff; letter-spacing: 0.3px; white-space: nowrap; }
-        
-        /* 修改：加入 margin-top 微调，抵消上方标签空间，实现视觉居中 */
-        .card-linea { font-size: 22px; font-weight: 700; color: var(--text-main); line-height: 1; margin-left: 2px; margin-top: -3px; }
+        .card-linea { font-size: 22px; font-weight: 700; color: var(--text-main); line-height: 1; margin-left: 2px; }
 
         .card-center { flex: 2; padding-left: 10px; display: flex; flex-direction: column; gap: 3px; justify-content: center; border-right: 1px solid #f2f2f7; }
         .card-stats { font-size: 12px; font-weight: 500; color: var(--text-sec); line-height: 1.4; white-space: nowrap; }
@@ -282,7 +279,6 @@
             if(!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
 
             if (isAnnulato) {
-                // 取消任务的简化模板：号码 margin 设为 0 以保证绝对居中
                 card.innerHTML = `
                     <div class="card-left">
                         <div class="card-linea" style="font-size: 18px; color: var(--text-sec); margin: 0;">${item.id}</div>
@@ -299,7 +295,7 @@
                 card.innerHTML = `
                     <div class="card-left">
                         <div class="card-badge bg-${colorClass}">${statusLabel}</div>
-                        <div class="card-linea">${item.id}</div>
+                        <div class="card-linea" style="margin-bottom: 20px;">${item.id}</div>
                     </div>
                     <div class="card-center">
                         <div class="card-stats">
@@ -327,8 +323,18 @@
         const todayStr = new Date().toLocaleDateString('it-IT');
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
-            const countA = dayLogs.filter(l => l.t === "Turno A" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("Chiusura turno")).length;
-            const countB = dayLogs.filter(l => l.t === "Turno B" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("Chiusura turno")).length;
+            const countA = dayLogs.filter(l => 
+                l.t === "Turno A" && 
+                !String(l.c).includes("ANNULATO") && 
+                !String(l.c).includes("Chiusura turno")
+            ).length;
+
+            const countB = dayLogs.filter(l => 
+                l.t === "Turno B" && 
+                !String(l.c).includes("ANNULATO") && 
+                !String(l.c).includes("Chiusura turno")
+            ).length;
+
             const isToday = (day === todayStr);
             const section = document.createElement('div');
             section.innerHTML = `
