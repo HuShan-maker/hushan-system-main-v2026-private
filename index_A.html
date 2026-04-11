@@ -32,8 +32,10 @@
             padding-bottom: 60px;
         }
 
+        /* 修改点：加入了与按钮一致的 4px 浅灰边框 */
         .input-card { 
-            background: #fff; padding: 15px; border-radius: 25px; width: 100%;
+            background: #fff; padding: 15px; border-radius: 35px; width: 100%;
+            border: 4px solid var(--gray);
             box-shadow: 0 10px 30px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px;
         }
 
@@ -203,11 +205,11 @@
 
         db.ref('feedback_pending').push({
             attrezzista: name, punteggio: score, messaggio: note,
-            timestamp: Date.now(), linea: lineaInput.value || "N/A", data: new Date().toLocaleDateString('it-IT')
+            timestamp: Date.now(), linea: lineaInput.value || "N/A", data: new Date().toLocaleDateString('it-IT'),
+            turno: turnoLabel.innerText // 这里直接发送 A 端显示的 Turno
         }).then(() => {
             alert("Feedback inviato!");
             document.getElementById('fModal').style.display = 'none';
-            // 修改：发送成功后重置所有项，名字重置为默认提示
             nameSelect.selectedIndex = 0; 
             document.getElementById('fScore').value = ""; 
             document.getElementById('fNote').value = "";
