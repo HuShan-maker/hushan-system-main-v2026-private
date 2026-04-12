@@ -176,14 +176,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- 2. 服务器时间同步核心变量 ---
+    // --- 2. 物理时间偏移 (关键逻辑) ---
     let serverTimeOffset = 0;
     db.ref(".info/serverTimeOffset").on("value", (snap) => {
         serverTimeOffset = snap.val() || 0;
     });
 
-    // --- 3. 班次逻辑 (物理时间校准) ---
+    // --- 3. 班次逻辑 (彻底移除 new Date() 的依赖) ---
     function getRealTimeTurno() {
+        // 使用物理时间，无视手机手动设置的时间
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
         const baseDate = new Date(2025, 11, 29); 
@@ -267,6 +268,7 @@
     }
 
     function handleMachineClick(id) {
+        // 关键锁死：只要物理时间不对，点击瞬间强刷 UI 并拦截
         if (!isNowMyWorkTime()) {
             renderGrid(); 
             return;
@@ -448,30 +450,25 @@
     document.getElementById('curYear').innerText = new Date().getFullYear();
     applyTheme();
     
-    // --- 4. 新增：物理时钟绝对化监听器 ---
+    // --- 暴力锁死逻辑核心 (针对桌面书签优化) ---
     let lastRenderedWorkStatus = isNowMyWorkTime();
-    let lastKnownMinute = new Date(Date.now() + serverTimeOffset).getMinutes();
 
-    // 唤醒机制核心：切回 App 瞬间强制重绘
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            console.log("Sistema Sveglio: Forzo ricalcolo immediato.");
+    // 唤醒、获取焦点、可见性切换 全方位重绘判定
+    ['visibilitychange', 'focus', 'pageshow'].forEach(ev => {
+        window.addEventListener(ev, () => {
+            console.log("Wake Up: Syncing shift with server time...");
             lastRenderedWorkStatus = isNowMyWorkTime();
             renderGrid();
             updateGlobalBadges();
             applyTheme();
-        }
+        });
     });
 
     setInterval(() => {
-        const nowServer = new Date(Date.now() + serverTimeOffset);
-        const currentMinute = nowServer.getMinutes();
         const currentWorkStatus = isNowMyWorkTime();
-
-        // 纠偏逻辑：只要状态变了 OR 分钟变了，强行刷新渲染
-        if (currentWorkStatus !== lastRenderedWorkStatus || currentMinute !== lastKnownMinute) {
+        // 只要发现物理班次不对，立刻强刷
+        if (currentWorkStatus !== lastRenderedWorkStatus) {
             lastRenderedWorkStatus = currentWorkStatus;
-            lastKnownMinute = currentMinute;
             renderGrid();
             updateGlobalBadges();
             applyTheme();
