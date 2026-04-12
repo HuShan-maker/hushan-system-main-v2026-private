@@ -535,22 +535,10 @@
     applyTheme();
     
     // 每 5 秒检查一次班次锁定状态和时间对齐
-setInterval(() => {
-    // 1. 正常的网格和图标渲染
-    renderGrid();
-    updateGlobalBadges();
-
-    // 2. 智能刷新判定
-    const currentRealTurno = getActiveTurno(); // 获取当前系统算出的班次
-    const displayedTurno = document.getElementById('turnoDisp')?.innerText; // 获取界面显示的班次
-
-    // 只有当两者不一致时（说明到了 14:15 或 00:00），才强刷页面
-    if (displayedTurno && currentRealTurno !== displayedTurno) {
-        console.log("Cambio turno rilevato! Ricaricamento...");
-        window.location.reload(true);
-    }
-}, 5000);
-
+    setInterval(() => {
+        renderGrid();
+        updateGlobalBadges();
+    }, 5000);
 </script>
 </body>
 </html>
