@@ -21,7 +21,7 @@
             padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
         }
         
-        /* 初始状态隐藏主内容，防止跳转时闪现 */
+        /* 默认隐藏，只有非分流情况才显示 */
         .main-content { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
 
         .header { text-align: center; margin-bottom: 35px; }
@@ -56,14 +56,14 @@
 </head>
 <body>
 
-    <div class="main-content" id="appBody">
+    <div class="main-content" id="devMenu">
         <div class="header">
             <h1>LINK DIRETTO</h1>
             <p>Seleziona il tuo profilo</p>
         </div>
 
         <div class="menu">
-            <a href="index_A.html?role=worker" class="option opt-a">
+            <a href="index_A.html" class="option opt-a">
                 <div class="icon">📱</div>
                 <div class="text-group">
                     <span class="title">LATO A: PRODUZIONE</span>
@@ -71,7 +71,7 @@
                 </div>
             </a>
 
-            <a href="index_B.html?role=tech" class="option opt-b">
+            <a href="index_B.html" class="option opt-b">
                 <div class="icon">🛠️</div>
                 <div class="text-group">
                     <span class="title">LATO B: ATTREZZISTI</span>
@@ -79,7 +79,7 @@
                 </div>
             </a>
 
-            <a href="index_C.html?role=boss" class="option opt-c">
+            <a href="index_C.html" class="option opt-c">
                 <div class="icon">📊</div>
                 <div class="text-group">
                     <span class="title">LATO C: CAPI TURNO</span>
@@ -92,33 +92,26 @@
     <div class="footer-text">© <span id="curYear"></span> HU SHAN · ALL RIGHTS RESERVED</div>
 
     <script>
-        // 1. 获取 URL 里的身份参数
+        // --- 开发者/分流 核心逻辑 ---
         const params = new URLSearchParams(window.location.search);
         const role = params.get('role');
 
-        // 2. 自动化分流判断
-        if (role === 'A') {
-            // 如果是工人，直接跳转到 A 端，并带上锁定标记
-            window.location.replace('index_A.html?role=worker');
-        } else if (role === 'B') {
-            // 如果是维修工，直接跳转到 B 端
-            window.location.replace('index_B.html?role=tech');
-        } else if (role === 'C') {
-            // 如果是工头，直接跳转到 C 端
-            window.location.replace('index_C.html?role=boss');
+        if (role === 'a') {
+            window.location.replace('index_A.html');
+        } else if (role === 'b') {
+            window.location.replace('index_B.html');
+        } else if (role === 'c') {
+            window.location.replace('index_C.html');
         } else {
-            // 如果没有参数，才显示选择菜单
-            document.getElementById('appBody').style.display = 'flex';
+            // 如果没有 role 参数，说明是你在调试，展示漂亮的三段入口
+            document.getElementById('devMenu').style.display = 'flex';
         }
 
         document.getElementById('curYear').innerText = new Date().getFullYear();
 
-        // 注册 Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('PWA: Service Worker OK'))
-                    .catch(err => console.log('PWA: Service Worker Error', err));
+                navigator.serviceWorker.register('sw.js');
             });
         }
     </script>
