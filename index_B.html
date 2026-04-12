@@ -28,7 +28,6 @@
             margin: 0; transition: background 0.4s, opacity 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
 
-        /* 顶部班次标签 */
         .turno-badge { 
             font-size: 11px; font-weight: 800; color: #fff; 
             background: #8e8e93; 
@@ -44,14 +43,12 @@
         .user-subtitle { font-size: 14px; color: #8e8e93; font-weight: 600; margin-top: 5px; height: 25px; display: flex; align-items: center; cursor: pointer; min-width: 50px; }
         .reg-btn { background: #000; color: #fff; font-size: 11px; border: none; padding: 0 14px; border-radius: 9px; font-weight: 700; text-transform: uppercase; height: 25px; display: flex; align-items: center; }
         
-        /* 钢琴按钮 */
         .pianos { display: flex; gap: 5px; margin-bottom: 25px; padding: 12px 0 8px 0; overflow: visible; }
         .p-btn { flex: 1; background: var(--btn-gray); color: #8e8e93; border: none; padding: 10px 0; border-radius: 12px; font-weight: 700; font-size: 10px; transition: 0.2s; position: relative; }
         .p-btn.active { color: #fff !important; }
         .p-badge { position: absolute; top: -5px; right: -5px; background: var(--red); width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; animation: badgePulse 1.5s infinite; border: 2px solid white; }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        /* 网格动画 */
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
         .slide-right { transform: translateX(30px); opacity: 0; }
@@ -63,9 +60,6 @@
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
         .locked-btn { background: var(--locked-gray-red) !important; color: rgba(255, 255, 255, 0.8) !important; opacity: 0.8; pointer-events: none; }
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
-
-        @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
-        @keyframes pulseOrange { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.96); opacity: 0.7; } }
 
         .bottom-area { display: flex; justify-content: center; margin-top: 20px; padding-bottom: 30px; }
         .fuori-btn { background: var(--btn-gray); border: none; border-radius: 18px; font-size: 14px; font-weight: 800; height: 65px; width: calc(50% + 6px); text-transform: uppercase; transition: 0.3s; position: relative; }
@@ -164,7 +158,6 @@
     </div>
 
 <script>
-    // --- 1. Firebase 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -175,13 +168,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- 服务器时间同步核心变量 ---
     let serverTimeOffset = 0;
-    db.ref(".info/serverTimeOffset").on("value", (snap) => {
-        serverTimeOffset = snap.val() || 0;
-    });
+    db.ref(".info/serverTimeOffset").on("value", (snap) => { serverTimeOffset = snap.val() || 0; });
 
-    // --- 2. 班次逻辑 ---
     function getRealTimeTurno() {
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -228,8 +217,7 @@
     let act = {}; 
     let logs = JSON.parse(localStorage.getItem('logs_v7') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
-    let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
-    let isInitialLoad = true; 
+    let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, isInitialLoad = true; 
 
     function autoCleanOldRecords() {
         const now = new Date(Date.now() + serverTimeOffset);
@@ -253,7 +241,14 @@
 
         Object.keys(rawData).forEach(id => {
             const item = rawData[id];
+            // 班次关闭逻辑修改：如果是旧班次任务
             if (item.turno && item.turno !== currentSystemTurno) {
+                // 特殊逻辑：如果是本设备接手的正在维修的任务(red)，在删除前存入本地记录
+                if (item.status === 'red' && item.takenBy === myDeviceId) {
+                    const now = Date.now() + serverTimeOffset;
+                    archiveIntervention(id, "CHIUSURA TURNO", item.startA, item.startD || item.startA, now, currentUserName);
+                }
+                // 从云端彻底删除该旧班次任务
                 db.ref('active_calls/' + id).remove();
             }
         });
@@ -264,10 +259,8 @@
             for(let p=1; p<=5; p++) {
                 pianoData[p].forEach(id => {
                     const it = act[id];
-                    if(it) {
-                        if(it.status === 'red') redP = p;
-                        if(it.status === 'orange' && it.startA < oldest) { oldest = it.startA; orangeP = p; }
-                    }
+                    if(it && it.status === 'red') redP = p;
+                    if(it && it.status === 'orange' && it.startA < oldest) { oldest = it.startA; orangeP = p; }
                 });
             }
             const isW = (myShift === currentSystemTurno);
@@ -297,7 +290,8 @@
     }
 
     function archiveIntervention(id, causale, startA, startD, endT, tech) {
-        const dStr = new Date(endT).toLocaleDateString('it-IT');
+        const nowServer = new Date(endT);
+        const dStr = nowServer.toLocaleDateString('it-IT');
         const newLog = { 
             i: id, day: dStr, 
             s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
@@ -400,13 +394,13 @@
                 </div>
                 <div class="day-content">
                     <table>
-                        <thead><tr><th>LINEA</th><th>INIZIO</th><th class="col-time">A & D</th><th>CAUSALE</th><th><span class="undo-btn" onclick="performUndo(event)">↺</span></th></tr></thead>
+                        <thead><tr><th>LINEA</th><th>INIZIO</th><th class="col-time">A & D</th><th>CAUSALE</th><th>×</th></tr></thead>
                         <tbody>${dayLogs.map(l => `<tr>
                             <td><b>${l.i === 'FUORI' ? 'F. LINEA' : l.i}</b></td>
                             <td>${l.s}</td>
                             <td class="col-time"><div class="time-cell"><span class="t-a">A: ${l.tA}m</span><span class="t-d">D: ${l.tD}m</span></div></td>
                             <td><span class="editable-causale" onclick="handleCausaleClick(${l.originalIndex})">${l.c}</span></td>
-                            <td class="del-row" onclick="deleteRow(${l.originalIndex})">×</td>
+                            <td style="color:red;font-weight:900" onclick="deleteRow(${l.originalIndex})">×</td>
                         </tr>`).join('')}</tbody>
                     </table>
                 </div>`;
@@ -414,11 +408,7 @@
         });
     }
 
-    function handleCausaleClick(index) { clickCount++; if(clickCount===1) clickTimer=setTimeout(()=>clickCount=0,350); else { clearTimeout(clickTimer); clickCount=0; editIndex = index; document.getElementById('editCausaleInput').value=logs[index].c; document.getElementById('editModal').style.display='flex'; setTimeout(()=>document.getElementById('editCausaleInput').focus(),150); } }
-    function confirmEdit() { logs[editIndex].c=document.getElementById('editCausaleInput').value.trim()||"-"; saveState(); document.getElementById('editModal').style.display='none'; renderLogs(); }
-    function performUndo(e) { e.stopPropagation(); if(undoStack.length){ let last=undoStack.pop(); logs=last.l; dayHistory=last.h; saveState(); renderLogs(); } }
-    function deleteRow(index) { undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs.splice(index,1); saveState(); renderLogs(); }
-    function openDayDelConfirm(e, day) { e.stopPropagation(); document.getElementById('dayConfirmModal').style.display='flex'; document.getElementById('confirmDayDelBtn').onclick=()=>{ undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs=logs.filter(l=>l.day!==day); dayHistory=dayHistory.filter(d=>d!==day); saveState(); document.getElementById('dayConfirmModal').style.display='none'; renderLogs(); }; }
+    function deleteRow(index) { if(confirm("Eliminare riga?")) { logs.splice(index,1); saveState(); renderLogs(); } }
     function handleNameClick() { nameClickCount++; if(nameClickCount === 2) { document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; setTimeout(() => document.getElementById('nameInput').focus(), 150); nameClickCount = 0; } else { setTimeout(() => { nameClickCount = 0; }, 350); } }
     function saveName() { let n=document.getElementById('nameInput').value.trim(); if(n){ currentUserName = n; localStorage.setItem('userName',n); document.getElementById('userNameDisp').innerText=n; document.getElementById('regNameDisp').innerText=n; } document.getElementById('nameModal').style.display='none'; }
     function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
@@ -445,19 +435,15 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
-    // --- 核心刷新逻辑修改 ---
     setInterval(() => {
-        const currentRealTurno = getRealTimeTurno(); // 永远基于服务器偏移校准的时间
+        const currentRealTurno = getRealTimeTurno(); 
         const displayedTurno = document.getElementById('turnoDisp')?.innerText;
         const isActuallyMyShift = (myShift === currentRealTurno);
 
         if (isActuallyMyShift) {
-            // 如果设备属于当前工作班次：正常刷新 UI，不重载页面
             renderGrid();
             updateGlobalBadges();
         } else {
-            // 如果设备不属于当前班次：每 5 秒强制重载页面
-            // 这会卡死任何试图通过修改本地时间来激活按钮的行为，并让“休息中”的设备无法操作
             console.log("Sicurezza: Refresh forzato per turno non attivo.");
             window.location.reload(true);
         }
