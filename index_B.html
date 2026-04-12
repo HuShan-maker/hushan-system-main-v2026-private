@@ -493,16 +493,27 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
-    // ---------------------------------------------------------
-    // 终极修复逻辑：每秒钟强制重绘 UI，不管状态有没有切换
-    // ---------------------------------------------------------
+    // --- 核心修复：双向状态差异监听 ---
+    // 既要检查有没有“进入”上班，也要检查有没有“退出”上班
+    let lastKnownWorkTimeStatus = isNowMyWorkTime();
+    let lastKnownMinute = new Date(Date.now() + serverTimeOffset).getMinutes();
+
     setInterval(() => {
-        // 这一行每秒执行一次，会根据最新的系统时间强制判定
-        renderGrid();
-        
-        // 顺便更新角标，防止红点残留
-        updateGlobalBadges();
-        
+        const now = new Date(Date.now() + serverTimeOffset);
+        const currentWorkTimeStatus = isNowMyWorkTime();
+        const currentMinute = now.getMinutes();
+
+        // 只要 1.班次状态变了 OR 2.分钟变了（说明时间在走）
+        // 就执行一次静默刷新。这不会造成肉眼可见的“一直在刷新”，但能锁定状态。
+        if (currentWorkTimeStatus !== lastKnownWorkTimeStatus || currentMinute !== lastKnownMinute) {
+            console.log("Sistema: Sync UI con orario attuale.");
+            lastKnownWorkTimeStatus = currentWorkTimeStatus;
+            lastKnownMinute = currentMinute;
+            
+            renderGrid();
+            updateGlobalBadges();
+            applyTheme();
+        }
     }, 1000); 
 </script>
 </body>
