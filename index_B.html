@@ -28,6 +28,7 @@
             margin: 0; transition: background 0.4s, opacity 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
 
+        /* 顶部班次标签 */
         .turno-badge { 
             font-size: 11px; font-weight: 800; color: #fff; 
             background: #8e8e93; 
@@ -43,12 +44,14 @@
         .user-subtitle { font-size: 14px; color: #8e8e93; font-weight: 600; margin-top: 5px; height: 25px; display: flex; align-items: center; cursor: pointer; min-width: 50px; }
         .reg-btn { background: #000; color: #fff; font-size: 11px; border: none; padding: 0 14px; border-radius: 9px; font-weight: 700; text-transform: uppercase; height: 25px; display: flex; align-items: center; }
         
+        /* 钢琴按钮 */
         .pianos { display: flex; gap: 5px; margin-bottom: 25px; padding: 12px 0 8px 0; overflow: visible; }
         .p-btn { flex: 1; background: var(--btn-gray); color: #8e8e93; border: none; padding: 10px 0; border-radius: 12px; font-weight: 700; font-size: 10px; transition: 0.2s; position: relative; }
         .p-btn.active { color: #fff !important; }
         .p-badge { position: absolute; top: -5px; right: -5px; background: var(--red); width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; animation: badgePulse 1.5s infinite; border: 2px solid white; }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
+        /* 网格动画 */
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
         .slide-right { transform: translateX(30px); opacity: 0; }
@@ -60,6 +63,9 @@
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
         .locked-btn { background: var(--locked-gray-red) !important; color: rgba(255, 255, 255, 0.8) !important; opacity: 0.8; pointer-events: none; }
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
+
+        @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
+        @keyframes pulseOrange { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.96); opacity: 0.7; } }
 
         .bottom-area { display: flex; justify-content: center; margin-top: 20px; padding-bottom: 30px; }
         .fuori-btn { background: var(--btn-gray); border: none; border-radius: 18px; font-size: 14px; font-weight: 800; height: 65px; width: calc(50% + 6px); text-transform: uppercase; transition: 0.3s; position: relative; }
@@ -158,6 +164,7 @@
     </div>
 
 <script>
+    // --- 1. Firebase 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -168,9 +175,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // --- 服务器时间同步 ---
     let serverTimeOffset = 0;
-    db.ref(".info/serverTimeOffset").on("value", (snap) => { serverTimeOffset = snap.val() || 0; });
+    db.ref(".info/serverTimeOffset").on("value", (snap) => {
+        serverTimeOffset = snap.val() || 0;
+    });
 
+    // --- 班次逻辑 ---
     function getRealTimeTurno() {
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -186,14 +197,14 @@
     if (!myShift) {
         let valid = false;
         while (!valid) {
-            let choice = prompt("Configurazione Iniziale: Sei Turno A o B? (Inserire A oppure B)");
+            let choice = prompt("Configurazione Iniziale: Sei Turno A o B?");
             if (choice) {
                 choice = choice.toUpperCase().trim();
                 if (choice === "A" || choice === "B") {
                     myShift = "Turno " + choice;
                     localStorage.setItem('deviceShift', myShift);
                     valid = true;
-                } else { alert("Inserire solo A o B!"); }
+                }
             }
         }
     }
@@ -241,14 +252,14 @@
 
         Object.keys(rawData).forEach(id => {
             const item = rawData[id];
-            // 班次关闭逻辑修改：如果是旧班次任务
+            // 班次切换判定逻辑
             if (item.turno && item.turno !== currentSystemTurno) {
-                // 特殊逻辑：如果是本设备接手的正在维修的任务(red)，在删除前存入本地记录
+                // 如果是本设备接手的正在维修的任务(red)，在系统清理前存入本地Registro
                 if (item.status === 'red' && item.takenBy === myDeviceId) {
                     const now = Date.now() + serverTimeOffset;
                     archiveIntervention(id, "CHIUSURA TURNO", item.startA, item.startD || item.startA, now, currentUserName);
                 }
-                // 从云端彻底删除该旧班次任务
+                // 从数据库彻底删除过期班次任务
                 db.ref('active_calls/' + id).remove();
             }
         });
@@ -390,7 +401,7 @@
             const dayLogs = groups[day].sort((a, b) => b.st - a.st);
             section.innerHTML = `
                 <div class="day-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <div class="day-header-left"><div class="day-del-btn" onclick="openDayDelConfirm(event, '${day}')">×</div><span>${day}</span></div>
+                    <div class="day-header-left"><span>${day}</span></div>
                 </div>
                 <div class="day-content">
                     <table>
@@ -451,3 +462,4 @@
 </script>
 </body>
 </html>
+
