@@ -290,9 +290,11 @@
         Object.keys(rawData).forEach(id => {
             const item = rawData[id];
             if (item.turno && item.turno !== currentSystemTurno) {
-                const now = Date.now() + serverTimeOffset;
-                const tech = item.techName || "AUTO-CLOSE";
-                archiveIntervention(id, item.causale + " (Fine Turno)", item.startA, item.startD || item.startA, now, tech);
+                // 如果任务由本设备接手且正在维修，系统因换班清理时，本地自动存入一条“系统关闭”记录
+                if (item.status === 'red' && item.takenBy === myDeviceId) {
+                    const now = Date.now() + serverTimeOffset;
+                    archiveIntervention(id, "chiuso da sistema", item.startA, item.startD || item.startA, now, currentUserName);
+                }
                 db.ref('active_calls/' + id).remove();
                 needsLocalArchive = true;
             }
@@ -312,7 +314,8 @@
                     }
                 });
             }
-            curPiano = redP || orangeP || 1;
+            const isW = (myShift === currentSystemTurno);
+            curPiano = isW ? (redP || orangeP || 1) : 1;
             isInitialLoad = false;
         }
         renderGrid(); 
@@ -534,21 +537,24 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
-      // --- 核心刷新逻辑修改 ---
+    // --- 核心刷新逻辑修改 ---
     setInterval(() => {
-        const currentRealTurno = getRealTimeTurno(); // 永远基于服务器偏移校准的时间
+        const currentRealTurno = getRealTimeTurno(); 
         const displayedTurno = document.getElementById('turnoDisp')?.innerText;
         const isActuallyMyShift = (myShift === currentRealTurno);
+        
+        // 判定 registro 页面（ID为 v 的元素）是否正在显示
+        const isRegistroOpen = document.getElementById('v').style.display === 'flex';
 
         if (isActuallyMyShift) {
-            // 如果设备属于当前工作班次：正常刷新 UI，不重载页面
             renderGrid();
             updateGlobalBadges();
         } else {
-            // 如果设备不属于当前班次：每 5 秒强制重载页面
-            // 这会卡死任何试图通过修改本地时间来激活按钮的行为，并让“休息中”的设备无法操作
-            console.log("Sicurezza: Refresh forzato per turno non attivo.");
-            window.location.reload(true);
+            // 只有当不在班次时间，且并未打开 registro 页面时，才执行强行重载
+            if (!isRegistroOpen) {
+                console.log("Sicurezza: Refresh forzato per turno non attivo.");
+                window.location.reload(true);
+            }
         }
     }, 5000);
 </script>
