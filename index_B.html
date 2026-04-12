@@ -28,14 +28,6 @@
             margin: 0; transition: background 0.4s, opacity 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
 
-        /* 暴力防篡改遮罩：唤醒时强制锁死 */
-        #safety-shield {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.01); 
-            z-index: 9999; display: flex; align-items: center; justify-content: center;
-            backdrop-filter: grayscale(1) blur(1px); pointer-events: all;
-        }
-
         /* 顶部班次标签 */
         .turno-badge { 
             font-size: 11px; font-weight: 800; color: #fff; 
@@ -126,8 +118,6 @@
 </head>
 <body class="p1">
 
-    <div id="safety-shield"></div>
-
     <div class="h">
         <div class="title-group">
             <h2>OPERATORE <span id="turnoDisp" class="turno-badge">--</span></h2>
@@ -185,13 +175,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // --- 核心安全变量 ---
     let serverTimeOffset = 0;
+    let isPermanentlyLocked = false; // 永久锁死开关
+
     db.ref(".info/serverTimeOffset").on("value", (snap) => {
         serverTimeOffset = snap.val() || 0;
-        verifyAndUnlock(); // 物理偏移量更新后立刻验证
+        checkSecurity(); // 每次同步后校验安全
     });
 
-    // --- 2. 班次逻辑 (严格服务器偏移判定) ---
+    // --- 2. 班次逻辑 (基于服务器时间) ---
     function getRealTimeTurno() {
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -203,17 +196,15 @@
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
-    function isNowMyWorkTime() { return myShift === getRealTimeTurno(); }
-
-    // 【暴力解锁核心】
-    function verifyAndUnlock() {
-        const shield = document.getElementById('safety-shield');
-        const isWorking = isNowMyWorkTime();
-        if (isWorking) {
-            shield.style.display = 'none'; 
-        } else {
-            shield.style.display = 'flex';
+    // 安全检查：如果检测到篡改，立即永久锁死
+    function checkSecurity() {
+        if (isPermanentlyLocked) return;
+        const currentTurno = getRealTimeTurno();
+        // 判定：如果计算出的班次与设置的班次不符，视为异常环境（锁死）
+        if (myShift !== currentTurno) {
+            isPermanentlyLocked = true;
             renderGrid();
+            updateGlobalBadges();
         }
     }
 
@@ -278,7 +269,9 @@
 
     db.ref('active_calls').on('value', (snapshot) => {
         act = snapshot.val() || {};
-        renderGrid(); updateGlobalBadges(); applyTheme();
+        renderGrid(); 
+        updateGlobalBadges(); 
+        applyTheme();
     });
 
     function saveState() { 
@@ -287,18 +280,20 @@
     }
 
     function handleMachineClick(id) {
-        // 点击瞬间强制锁死判定
-        if (!isNowMyWorkTime()) { verifyAndUnlock(); return; }
+        if (isPermanentlyLocked) return; // 永久锁死拦截
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         if (!act[id]) return; 
         if (act[id].status === 'orange') {
-            db.ref('active_calls/' + id).update({ status: 'red', startD: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName });
+            db.ref('active_calls/' + id).update({ 
+                status: 'red', startD: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName 
+            });
         } 
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
-            const item = act[id]; const now = Date.now() + serverTimeOffset;
+            const item = act[id];
+            const now = Date.now() + serverTimeOffset;
             archiveIntervention(id, item.causale || "-", item.startA, item.startD || item.startA, now, currentUserName);
-            if (id === 'FUORI') db.ref('active_calls/FUORI').remove();
-            else db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime });
+            if (id === 'FUORI') { db.ref('active_calls/FUORI').remove(); }
+            else { db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime }); }
         }
     }
 
@@ -307,82 +302,133 @@
         const newLog = { 
             i: id, day: nowServer.toLocaleDateString('it-IT'), 
             s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-            tA: Math.round((startD - startA) / 60000), tD: Math.round((endT - startD) / 60000), 
+            tA: Math.round((startD - startA) / 60000), 
+            tD: Math.round((endT - startD) / 60000), 
             st: startA, c: causale, tech: tech
         };
-        logs.push(newLog); if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+        logs.push(newLog);
+        if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
         saveState();
     }
 
     function toggleFuori() {
-        if (!isNowMyWorkTime()) { verifyAndUnlock(); return; }
+        if (isPermanentlyLocked) return; // 永久锁死拦截
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         const fs = act['FUORI'];
         if(fs && fs.status === 'red' && fs.takenBy === myDeviceId) {
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
-            db.ref('active_calls/FUORI').set({ status: 'red', startA: sTime, startB: sTime, startD: sTime, takenBy: myDeviceId, techName: currentUserName, turno: getRealTimeTurno() });
+            db.ref('active_calls/FUORI').set({ 
+                status: 'red', startA: sTime, startB: sTime, startD: sTime, takenBy: myDeviceId, techName: currentUserName,
+                turno: getRealTimeTurno() 
+            });
         }
     }
 
     function saveFuoriCausale() {
         const val = document.getElementById('fuoriCausaleInput').value.trim() || "Attività Extra";
-        const fs = act['FUORI']; const now = Date.now() + serverTimeOffset;
+        const fs = act['FUORI']; 
+        const now = Date.now() + serverTimeOffset;
         archiveIntervention('FUORI', val, fs.startA, fs.startD || fs.startA, now, currentUserName);
         db.ref('active_calls/FUORI').remove();
-        document.getElementById('fuoriCausaleInput').value = ""; document.getElementById('fuoriModal').style.display = 'none';
+        document.getElementById('fuoriCausaleInput').value = "";
+        document.getElementById('fuoriModal').style.display = 'none';
         renderGrid();
     }
 
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
-        const isWorkingTime = isNowMyWorkTime();
-        document.getElementById('turnoDisp').innerText = myShift;
-        document.getElementById('turnoDisp').classList.toggle('turno-on', isWorkingTime);
-        document.getElementById('dynamicContent').classList.toggle('shift-lock-ui', !isWorkingTime);
+        const turnoLabel = document.getElementById('turnoDisp');
+        const contentArea = document.getElementById('dynamicContent');
+        
+        // 判定：只要被永久锁死，或者物理班次不对，界面全部灰显
+        const isWorkingTime = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
+        
+        turnoLabel.innerText = myShift;
+        if (isWorkingTime) { 
+            contentArea.classList.remove('shift-lock-ui'); 
+            turnoLabel.classList.add('turno-on'); 
+        } else { 
+            contentArea.classList.add('shift-lock-ui'); 
+            turnoLabel.classList.remove('turno-on'); 
+        }
 
+        const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
+        const c = themeConfig[curPiano];
+        
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
-            const b = document.createElement('button'); b.className = 'btn-machine'; b.innerText = i;
+            const b = document.createElement('button'); 
             const s = isWorkingTime ? act[i] : null; 
+            
+            b.className = 'btn-machine'; b.innerText = i;
             if (s && (s.status === 'orange' || s.status === 'red')) {
-                if (s.status === 'orange') { b.classList.add('waiting'); b.style.color = "#fff"; } 
-                else { if (s.takenBy === myDeviceId) b.classList.add('or'); else b.classList.add('locked-btn'); }
-            } else { b.style.color = themeConfig[curPiano]; b.style.backgroundColor = 'var(--btn-gray)'; }
+                if (s.status === 'orange') { b.classList.add('waiting'); b.style.color = "#ffffff"; } 
+                else { if (s.takenBy === myDeviceId) { b.classList.add('or'); b.style.color = "#ffffff"; } else { b.classList.add('locked-btn'); } }
+            } else { 
+                b.style.color = c; 
+                b.style.backgroundColor = 'var(--btn-gray)'; 
+            }
+            
             b.onclick = () => isWorkingTime && handleMachineClick(i); 
-            wrap.appendChild(b); gd.appendChild(wrap);
+            wrap.appendChild(b);
+            
+            if (isWorkingTime && s && s.status === 'orange') {
+                const qNum = allOrangeIds.indexOf(i) + 1;
+                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = qNum; wrap.appendChild(badge);
+            }
+            gd.appendChild(wrap);
         });
-        const f = document.getElementById('btn-fuori'), fs = isWorkingTime ? act['FUORI'] : null;
+        
+        const f = document.getElementById('btn-fuori');
+        const fs = isWorkingTime ? act['FUORI'] : null;
         f.className = (fs && fs.status === 'red') ? 'fuori-btn or' : 'fuori-btn';
-        if (!(fs && fs.status === 'red')) f.style.color = themeConfig[curPiano];
+        if (!(fs && fs.status === 'red')) f.style.color = c;
     }
 
     function updateGlobalBadges() {
-        const isW = isNowMyWorkTime();
+        const isW = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
         for (let p = 1; p <= 5; p++) {
             const btn = document.getElementById(`p-btn-${p}`);
             const count = isW ? pianoData[p].filter(id => act[id] && (act[id].status === 'orange' || act[id].status === 'red')).length : 0;
-            const old = btn.querySelector('.p-badge'); if(old) old.remove();
+            const oldBadge = btn.querySelector('.p-badge');
+            if (oldBadge) oldBadge.remove();
             if (count > 0) { const b = document.createElement('div'); b.className = 'p-badge'; btn.appendChild(b); }
         }
     }
 
-    function switchPiano(p, dir='left') { if(p===curPiano) return; const gd = document.getElementById('g'); gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); setTimeout(() => { curPiano = p; applyTheme(); gd.className = ''; }, 150); }
+    function switchPiano(p, dir='left') { 
+        if(p===curPiano || isPermanentlyLocked) return; 
+        const gd = document.getElementById('g'); 
+        gd.className = (dir==='left' ? 'slide-left' : 'slide-right'); 
+        setTimeout(() => { curPiano = p; applyTheme(); gd.className = ''; }, 150); 
+    }
+
     function applyTheme() { 
         const c=themeConfig[curPiano]; 
         document.querySelectorAll('.p-btn').forEach((b,i)=>{ 
-            const isT = (i+1 === curPiano);
-            b.style.backgroundColor = isT ? c : '#f2f2f7'; b.style.color = isT ? '#fff' : '#8e8e93';
-            b.classList.toggle('active', isT);
-        }); renderGrid(); 
+            const isTarget = (i+1 === curPiano);
+            b.style.backgroundColor = isTarget ? (isPermanentlyLocked ? '#8e8e93' : c) : '#f2f2f7'; 
+            b.style.color = isTarget ? '#fff' : '#8e8e93';
+            b.classList.toggle('active', isTarget); 
+        }); 
+        document.getElementById('floorColor').value = c; 
+        renderGrid(); 
     }
-    function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
+
+    function updateThemeColor(c) { 
+        if(isPermanentlyLocked) return;
+        themeConfig[curPiano]=c; 
+        localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); 
+        applyTheme(); 
+    }
 
     function renderLogs() {
-        const container = document.getElementById('logContainer'); container.innerHTML = '';
+        const container = document.getElementById('logContainer');
         const expandedDays = new Set();
         container.querySelectorAll('.day-section:not(.collapsed) span').forEach(el => expandedDays.add(el.innerText.trim()));
+        container.innerHTML = '';
         const oggi = new Date(Date.now() + serverTimeOffset).toLocaleDateString('it-IT');
         const groups = {}; dayHistory.forEach(d => groups[d] = []);
         logs.forEach((l, idx) => { if (groups[l.day]) groups[l.day].push({ ...l, originalIndex: idx }); });
@@ -436,20 +482,29 @@
     }
 
     document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-    document.addEventListener('touchend', e => { if (document.getElementById('v').style.display === 'flex') return; let dX = e.changedTouches[0].screenX - touchStartX; if (Math.abs(dX) > 70) dX > 0 ? (curPiano > 1 && switchPiano(curPiano - 1, 'right')) : (curPiano < 5 && switchPiano(curPiano + 1, 'left')); }, { passive: true });
+    document.addEventListener('touchend', e => { 
+        if (document.getElementById('v').style.display === 'flex' || isPermanentlyLocked) return; 
+        let dX = e.changedTouches[0].screenX - touchStartX; 
+        if (Math.abs(dX) > 70) dX > 0 ? (curPiano > 1 && switchPiano(curPiano - 1, 'right')) : (curPiano < 5 && switchPiano(curPiano + 1, 'left')); 
+    }, { passive: true });
 
-    // 【全方位拦截监听： visibilitychange, focus, pageshow】
-    ['visibilitychange', 'focus', 'pageshow'].forEach(ev => {
-        window.addEventListener(ev, () => {
-            document.getElementById('safety-shield').style.display = 'flex'; 
-            db.ref(".info/serverTimeOffset").once("value").then(() => verifyAndUnlock()); 
-        });
-    });
-
-    setInterval(() => verifyAndUnlock(), 4000); 
     document.getElementById('userNameDisp').innerText = document.getElementById('regNameDisp').innerText = currentUserName;
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
+    
+    // --- 终极每10秒安全监控逻辑 ---
+    setInterval(() => {
+        // 重新从服务器获取偏移量（质问服务器真时间）
+        db.ref(".info/serverTimeOffset").once("value").then((snap) => {
+            serverTimeOffset = snap.val() || 0;
+            checkSecurity(); // 执行安全检查
+            
+            // 常规重绘
+            renderGrid();
+            updateGlobalBadges();
+            console.log("System Check: Security Scan Completed.");
+        });
+    }, 10000); // 严格10秒间隔
 </script>
 </body>
 </html>
