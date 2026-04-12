@@ -183,25 +183,15 @@
 
     // --- 2. 班次逻辑 (基于总周数累加，确保跨年自动衔接) ---
     function getRealTimeTurno() {
-        // 使用本地时间校准后的真实时间
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
-        
-        // 设定基准日期：2025年12月29日（2026年第1周的周一）
         const baseDate = new Date(2025, 11, 29); 
-        
-        // 计算从基准点到现在一共过去了多少毫秒，换算成绝对累加的周数
         const msPerWeek = 7 * 24 * 60 * 60 * 1000;
         const totalWeeks = Math.floor((now - baseDate) / msPerWeek) + 1;
-
-        // 根据总周数的奇偶性判定
         const isSingleWeek = totalWeeks % 2 !== 0; 
         const isAfternoon = (hour >= 14.25); 
-
-        // 班次判定逻辑：单数周下午是 A，双数周下午是 B
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
-
 
     let myShift = localStorage.getItem('deviceShift') || "";
     if (!myShift) {
@@ -241,64 +231,32 @@
     let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
     let isInitialLoad = true; 
 
-    // --- 新增：30天自动清理逻辑 ---
     function autoCleanOldRecords() {
         const now = new Date(Date.now() + serverTimeOffset);
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(now.getDate() - 30);
-        
+        const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(now.getDate() - 30);
         let needsSave = false;
-
-        // 1. 过滤 dayHistory
-        const updatedDayHistory = dayHistory.filter(dayStr => {
-            const [d, m, y] = dayStr.split('/');
-            const recordDate = new Date(y, m - 1, d);
-            if (recordDate < thirtyDaysAgo) {
-                needsSave = true;
-                return false;
-            }
-            return true;
+        dayHistory = dayHistory.filter(dayStr => {
+            const [d, m, y] = dayStr.split('/'); const recordDate = new Date(y, m - 1, d);
+            if (recordDate < thirtyDaysAgo) { needsSave = true; return false; } return true;
         });
-
-        // 2. 过滤 logs
-        const updatedLogs = logs.filter(l => {
-            const [d, m, y] = l.day.split('/');
-            const recordDate = new Date(y, m - 1, d);
-            if (recordDate < thirtyDaysAgo) {
-                needsSave = true;
-                return false;
-            }
-            return true;
+        logs = logs.filter(l => {
+            const [d, m, y] = l.day.split('/'); const recordDate = new Date(y, m - 1, d);
+            if (recordDate < thirtyDaysAgo) { needsSave = true; return false; } return true;
         });
-
-        if (needsSave) {
-            logs = updatedLogs;
-            dayHistory = updatedDayHistory;
-            saveState();
-        }
+        if (needsSave) saveState();
     }
-
-    // 初始化时执行清理
     autoCleanOldRecords();
 
-    // --- 4. 核心监听器 ---
     db.ref('active_calls').on('value', (snapshot) => {
         const rawData = snapshot.val() || {};
         const currentSystemTurno = getRealTimeTurno();
-        let needsLocalArchive = false;
 
         Object.keys(rawData).forEach(id => {
             const item = rawData[id];
             if (item.turno && item.turno !== currentSystemTurno) {
-                const now = Date.now() + serverTimeOffset;
-                const tech = item.techName || "AUTO-CLOSE";
-                archiveIntervention(id, item.causale + " (Fine Turno)", item.startA, item.startD || item.startA, now, tech);
                 db.ref('active_calls/' + id).remove();
-                needsLocalArchive = true;
             }
         });
-
-        if(needsLocalArchive) saveState();
 
         act = rawData;
         if (isInitialLoad) {
@@ -312,7 +270,8 @@
                     }
                 });
             }
-            curPiano = redP || orangeP || 1;
+            const isW = (myShift === currentSystemTurno);
+            curPiano = isW ? (redP || orangeP || 1) : 1;
             isInitialLoad = false;
         }
         renderGrid(); 
@@ -325,23 +284,15 @@
         localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
     }
 
-    // --- 5. 归档逻辑 ---
     function handleMachineClick(id) {
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         if (!act[id]) return; 
         if (act[id].status === 'orange') {
-            db.ref('active_calls/' + id).update({ 
-                status: 'red', 
-                startD: sTime, 
-                startB: sTime, 
-                takenBy: myDeviceId,
-                techName: currentUserName 
-            });
+            db.ref('active_calls/' + id).update({ status: 'red', startD: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName });
         } 
         else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
             const item = act[id];
-            const now = Date.now() + serverTimeOffset;
-            archiveIntervention(id, item.causale || "-", item.startA, item.startD || item.startA, now, currentUserName);
+            archiveIntervention(id, item.causale || "-", item.startA, item.startD || item.startA, Date.now() + serverTimeOffset, currentUserName);
             if (id === 'FUORI') { db.ref('active_calls/FUORI').remove(); }
             else { db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime }); }
         }
@@ -349,15 +300,16 @@
 
     function archiveIntervention(id, causale, startA, startD, endT, tech) {
         const nowServer = new Date(endT);
+        const dStr = nowServer.toLocaleDateString('it-IT');
         const newLog = { 
-            i: id, day: nowServer.toLocaleDateString('it-IT'), 
+            i: id, day: dStr, 
             s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
             tA: Math.round((startD - startA) / 60000), 
             tD: Math.round((endT - startD) / 60000), 
             st: startA, c: causale, tech: tech
         };
         logs.push(newLog);
-        if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+        if(!dayHistory.includes(dStr)) dayHistory.push(dStr);
         saveState();
     }
 
@@ -368,79 +320,47 @@
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
-            db.ref('active_calls/FUORI').set({ 
-                status: 'red', 
-                startA: sTime, 
-                startB: sTime, 
-                startD: sTime, 
-                takenBy: myDeviceId,
-                techName: currentUserName,
-                turno: getRealTimeTurno() 
-            });
+            db.ref('active_calls/FUORI').set({ status: 'red', startA: sTime, startB: sTime, startD: sTime, takenBy: myDeviceId, techName: currentUserName, turno: getRealTimeTurno() });
         }
     }
 
     function saveFuoriCausale() {
         const val = document.getElementById('fuoriCausaleInput').value.trim() || "Attività Extra";
-        const fs = act['FUORI']; 
-        const now = Date.now() + serverTimeOffset;
+        const fs = act['FUORI']; const now = Date.now() + serverTimeOffset;
         archiveIntervention('FUORI', val, fs.startA, fs.startD || fs.startA, now, currentUserName);
         db.ref('active_calls/FUORI').remove();
-        document.getElementById('fuoriCausaleInput').value = "";
-        document.getElementById('fuoriModal').style.display = 'none';
+        document.getElementById('fuoriCausaleInput').value = ""; document.getElementById('fuoriModal').style.display = 'none';
         renderGrid();
     }
 
-    // --- 6. UI 渲染 (隐私保护增强) ---
     function renderGrid() {
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const turnoLabel = document.getElementById('turnoDisp');
         const contentArea = document.getElementById('dynamicContent');
-        
         const systemTurno = getRealTimeTurno();
         const isWorkingTime = (myShift === systemTurno);
-        
         turnoLabel.innerText = myShift;
-        if (isWorkingTime) { 
-            contentArea.classList.remove('shift-lock-ui'); 
-            turnoLabel.classList.add('turno-on'); 
-        } else { 
-            contentArea.classList.add('shift-lock-ui'); 
-            turnoLabel.classList.remove('turno-on'); 
-        }
-
+        if (isWorkingTime) { contentArea.classList.remove('shift-lock-ui'); turnoLabel.classList.add('turno-on'); } 
+        else { contentArea.classList.add('shift-lock-ui'); turnoLabel.classList.remove('turno-on'); }
         const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
         const c = themeConfig[curPiano];
-        
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
             const b = document.createElement('button'); 
-            
-            // 核心隐私修改：如果不属于我的上班时间，实时状态 s 强制设为 null
             const s = isWorkingTime ? act[i] : null; 
-            
             b.className = 'btn-machine'; b.innerText = i;
             if (s && (s.status === 'orange' || s.status === 'red')) {
                 if (s.status === 'orange') { b.classList.add('waiting'); b.style.color = "#ffffff"; } 
                 else { if (s.takenBy === myDeviceId) { b.classList.add('or'); b.style.color = "#ffffff"; } else { b.classList.add('locked-btn'); } }
-            } else { 
-                b.style.color = c; 
-                b.style.backgroundColor = 'var(--btn-gray)'; 
-            }
-            
+            } else { b.style.color = c; b.style.backgroundColor = 'var(--btn-gray)'; }
             b.onclick = () => isWorkingTime && handleMachineClick(i); 
             wrap.appendChild(b);
-            
-            // 只有上班时才显示橙色角标
             if (isWorkingTime && s && s.status === 'orange') {
-                const qNum = allOrangeIds.indexOf(i) + 1;
-                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = qNum; wrap.appendChild(badge);
+                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = allOrangeIds.indexOf(i) + 1; wrap.appendChild(badge);
             }
             gd.appendChild(wrap);
         });
-        
-        const f = document.getElementById('btn-fuori');
-        const fs = isWorkingTime ? act['FUORI'] : null;
+        const f = document.getElementById('btn-fuori'), fs = isWorkingTime ? act['FUORI'] : null;
         f.className = (fs && fs.status === 'red') ? 'fuori-btn or' : 'fuori-btn';
         if (!(fs && fs.status === 'red')) f.style.color = c;
     }
@@ -449,7 +369,6 @@
         const isW = (myShift === getRealTimeTurno());
         for (let p = 1; p <= 5; p++) {
             const btn = document.getElementById(`p-btn-${p}`);
-            // 只有上班时才计算红/橙色总数徽章
             const count = isW ? pianoData[p].filter(id => act[id] && (act[id].status === 'orange' || act[id].status === 'red')).length : 0;
             const oldBadge = btn.querySelector('.p-badge');
             if (oldBadge) oldBadge.remove();
@@ -462,8 +381,7 @@
         const c=themeConfig[curPiano]; 
         document.querySelectorAll('.p-btn').forEach((b,i)=>{ 
             const isTarget = (i+1 === curPiano);
-            b.style.backgroundColor = isTarget ? c : '#f2f2f7'; 
-            b.style.color = isTarget ? '#fff' : '#8e8e93';
+            b.style.backgroundColor = isTarget ? c : '#f2f2f7'; b.style.color = isTarget ? '#fff' : '#8e8e93';
             b.classList.toggle('active', isTarget); 
         }); 
         document.getElementById('floorColor').value = c; renderGrid(); 
@@ -471,16 +389,12 @@
     function updateThemeColor(c) { themeConfig[curPiano]=c; localStorage.setItem('pianoThemes',JSON.stringify(themeConfig)); applyTheme(); }
 
     function renderLogs() {
-        const container = document.getElementById('logContainer');
-        const expandedDays = new Set();
-        container.querySelectorAll('.day-section:not(.collapsed) span').forEach(el => expandedDays.add(el.innerText.trim()));
-        container.innerHTML = '';
+        const container = document.getElementById('logContainer'); container.innerHTML = '';
         const oggi = new Date(Date.now() + serverTimeOffset).toLocaleDateString('it-IT');
         const groups = {}; dayHistory.forEach(d => groups[d] = []);
         logs.forEach((l, idx) => { if (groups[l.day]) groups[l.day].push({ ...l, originalIndex: idx }); });
         Object.keys(groups).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
-            const section = document.createElement('div');
-            const isCollapsed = expandedDays.size === 0 ? (day !== oggi) : !expandedDays.has(day);
+            const section = document.createElement('div'); const isCollapsed = (day !== oggi);
             section.className = 'day-section' + (isCollapsed ? ' collapsed' : '');
             const dayLogs = groups[day].sort((a, b) => b.st - a.st);
             section.innerHTML = `
@@ -534,10 +448,14 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
-    // 每 5 秒检查一次班次锁定状态和时间对齐
     setInterval(() => {
         renderGrid();
         updateGlobalBadges();
+        const currentRealTurno = getRealTimeTurno();
+        const displayedTurno = document.getElementById('turnoDisp')?.innerText;
+        if (displayedTurno && displayedTurno !== "--" && currentRealTurno !== displayedTurno) {
+            window.location.reload(true);
+        }
     }, 5000);
 </script>
 </body>
