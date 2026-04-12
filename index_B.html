@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Attrezzisti v8.1</title>
+    <title>B - Attrezzisti v8.2</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -493,36 +493,16 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
-    // --- 最终修复逻辑：监控系统时间篡改 ---
-    let lastCalculatedTurno = getRealTimeTurno();
-
+    // ---------------------------------------------------------
+    // 终极修复逻辑：每秒钟强制重绘 UI，不管状态有没有切换
+    // ---------------------------------------------------------
     setInterval(() => {
-        const currentRealTurno = getRealTimeTurno(); 
-        const contentArea = document.getElementById('dynamicContent');
-        const turnoLabel = document.getElementById('turnoDisp');
-
-        // 如果手动改了系统时间导致班次变化，立即强制重绘
-        if (currentRealTurno !== lastCalculatedTurno) {
-            console.log("Sistema: Cambio turno o orario rilevato. Sync...");
-            lastCalculatedTurno = currentRealTurno;
-            renderGrid();
-            updateGlobalBadges();
-            applyTheme();
-        }
-
-        const isActuallyMyShift = (myShift === currentRealTurno);
-
-        if (isActuallyMyShift) {
-            if (contentArea.classList.contains('shift-lock-ui')) {
-                contentArea.classList.remove('shift-lock-ui');
-                turnoLabel.classList.add('turno-on');
-            }
-        } else {
-            if (!contentArea.classList.contains('shift-lock-ui')) {
-                contentArea.classList.add('shift-lock-ui');
-                turnoLabel.classList.remove('turno-on');
-            }
-        }
+        // 这一行每秒执行一次，会根据最新的系统时间强制判定
+        renderGrid();
+        
+        // 顺便更新角标，防止红点残留
+        updateGlobalBadges();
+        
     }, 1000); 
 </script>
 </body>
