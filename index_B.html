@@ -164,7 +164,6 @@
     </div>
 
 <script>
-    // --- 1. Firebase 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -175,16 +174,14 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- 核心安全变量 ---
     let serverTimeOffset = 0;
-    let isPermanentlyLocked = false; // 永久锁死开关
+    let isPermanentlyLocked = false; 
 
     db.ref(".info/serverTimeOffset").on("value", (snap) => {
         serverTimeOffset = snap.val() || 0;
-        checkSecurity(); // 每次同步后校验安全
+        checkSecurity(); 
     });
 
-    // --- 2. 班次逻辑 (基于服务器时间) ---
     function getRealTimeTurno() {
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -196,11 +193,9 @@
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
-    // 安全检查：如果检测到篡改，立即永久锁死
     function checkSecurity() {
         if (isPermanentlyLocked) return;
         const currentTurno = getRealTimeTurno();
-        // 判定：如果计算出的班次与设置的班次不符，视为异常环境（锁死）
         if (myShift !== currentTurno) {
             isPermanentlyLocked = true;
             renderGrid();
@@ -280,7 +275,7 @@
     }
 
     function handleMachineClick(id) {
-        if (isPermanentlyLocked) return; // 永久锁死拦截
+        if (isPermanentlyLocked) return; 
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         if (!act[id]) return; 
         if (act[id].status === 'orange') {
@@ -292,8 +287,21 @@
             const item = act[id];
             const now = Date.now() + serverTimeOffset;
             archiveIntervention(id, item.causale || "-", item.startA, item.startD || item.startA, now, currentUserName);
+            
+            // --- 核心修改：存入 Firebase 日期历史分区 ---
+            const today = new Date(now).toISOString().split('T')[0];
+            db.ref(`history/${today}/${id}_${now}`).set({
+                ...item,
+                status: 'COMPLETATO',
+                endTime: new Date(now).toLocaleTimeString('it-IT'),
+                timestamp: now,
+                techName: currentUserName
+            });
+
             if (id === 'FUORI') { db.ref('active_calls/FUORI').remove(); }
-            else { db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime }); }
+            else { db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime }).then(() => {
+                db.ref('active_calls/' + id).remove(); // 物理移除
+            }); }
         }
     }
 
@@ -312,7 +320,7 @@
     }
 
     function toggleFuori() {
-        if (isPermanentlyLocked) return; // 永久锁死拦截
+        if (isPermanentlyLocked) return; 
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         const fs = act['FUORI'];
         if(fs && fs.status === 'red' && fs.takenBy === myDeviceId) {
@@ -331,6 +339,18 @@
         const fs = act['FUORI']; 
         const now = Date.now() + serverTimeOffset;
         archiveIntervention('FUORI', val, fs.startA, fs.startD || fs.startA, now, currentUserName);
+        
+        // --- 核心修改：FUORI 也要存入 Firebase 日期历史分区 ---
+        const today = new Date(now).toISOString().split('T')[0];
+        db.ref(`history/${today}/FUORI_${now}`).set({
+            ...fs,
+            causale: val,
+            status: 'COMPLETATO',
+            endTime: new Date(now).toLocaleTimeString('it-IT'),
+            timestamp: now,
+            techName: currentUserName
+        });
+
         db.ref('active_calls/FUORI').remove();
         document.getElementById('fuoriCausaleInput').value = "";
         document.getElementById('fuoriModal').style.display = 'none';
@@ -341,8 +361,6 @@
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const turnoLabel = document.getElementById('turnoDisp');
         const contentArea = document.getElementById('dynamicContent');
-        
-        // 判定：只要被永久锁死，或者物理班次不对，界面全部灰显
         const isWorkingTime = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
         
         turnoLabel.innerText = myShift;
@@ -492,19 +510,14 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
-    // --- 终极每10秒安全监控逻辑 ---
     setInterval(() => {
-        // 重新从服务器获取偏移量（质问服务器真时间）
         db.ref(".info/serverTimeOffset").once("value").then((snap) => {
             serverTimeOffset = snap.val() || 0;
-            checkSecurity(); // 执行安全检查
-            
-            // 常规重绘
+            checkSecurity(); 
             renderGrid();
             updateGlobalBadges();
-            console.log("System Check: Security Scan Completed.");
         });
-    }, 10000); // 严格10秒间隔
+    }, 10000); 
 </script>
 </body>
 </html>
