@@ -23,10 +23,10 @@
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-shrink: 0; }
         .title-area h1 { font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
         
-        /* 修改点：Turno 徽章改为灰蓝色 */
+        /* 修改点：Turno 颜色改为浅海蓝 */
         .turno-badge { 
-            font-size: 11px; font-weight: 800; color: #555566; 
-            background: #d1d1e0; padding: 3px 10px; border-radius: 8px; 
+            font-size: 11px; font-weight: 800; color: #003366; 
+            background: #99ccff; padding: 3px 10px; border-radius: 8px; 
             margin-top: 4px; text-transform: uppercase; display: inline-block;
         }
 
@@ -81,7 +81,7 @@
         th { font-weight: 700; color: var(--text-sec); text-transform: uppercase; font-size: 9px; }
         .tech-cell { font-size: 10px; font-weight: 600; color: var(--text-main); word-break: break-all; }
 
-        /* 修改点：Feedback 按钮下移 10px */
+        /* 修改点：反馈按钮居中且下移 */
         .fb-read-btn {
             background: #e5e5ea; color: #000; border: none; padding: 12px 25px;
             border-radius: 20px; font-weight: 800; font-size: 10px;
@@ -172,6 +172,7 @@
     function autoCleanOldRecords() {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyMs = thirtyDaysAgo.getTime();
         let needsSave = false;
         dayHistory = dayHistory.filter(dayStr => {
             const [d, m, y] = dayStr.split('/');
@@ -180,40 +181,30 @@
             return true;
         });
         const fbLen = feedbackLogs.length;
-        feedbackLogs = feedbackLogs.filter(f => f.timestamp > (Date.now() - 30 * 24 * 60 * 60 * 1000));
+        feedbackLogs = feedbackLogs.filter(f => f.timestamp > (Date.now() - 30*24*60*60*1000));
         if(fbLen !== feedbackLogs.length) needsSave = true;
         if (needsSave) { processedStarts = new Set(logs.map(l => l.st)); saveState(); }
     }
     autoCleanOldRecords();
 
-    function calculateTurnoByTimestamp(ts) {
-        const date = new Date(ts);
-        const hour = date.getHours() + (date.getMinutes() / 60);
-        const baseDate = new Date(2025, 11, 29); 
-        const totalWeeks = Math.floor((date - baseDate) / (7*24*60*60*1000)) + 1;
-        const isSingleWeek = totalWeeks % 2 !== 0; 
-        const isAfternoon = (hour >= 14.25); 
-        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
-    }
-
-    // 新增：静默同步及清理 Firebase 历史路径
-    function syncAndCleanCloud() {
+    // 核心修改：静默同步云端历史并清理旧数据
+    function syncFromCloudHistory() {
         const today = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-        const keepDays = [yesterday, today];
+        const daysToSync = [yesterday, today];
 
         db.ref('history').once('value').then(snap => {
             const all = snap.val();
             if (all) {
-                Object.keys(all).forEach(d => { if (!keepDays.includes(d)) db.ref(`history/${d}`).remove(); });
+                Object.keys(all).forEach(d => { if (!daysToSync.includes(d)) db.ref(`history/${d}`).remove(); });
             }
         });
 
-        keepDays.forEach(dateStr => {
+        daysToSync.forEach(dateStr => {
             db.ref(`history/${dateStr}`).once('value').then(snapshot => {
                 const dayData = snapshot.val();
                 if (dayData) {
-                    let needsUpdate = false;
+                    let updated = false;
                     Object.keys(dayData).forEach(key => {
                         const item = dayData[key];
                         if (!processedStarts.has(item.startA)) {
@@ -230,13 +221,23 @@
                             });
                             processedStarts.add(item.startA);
                             if (!dayHistory.includes(logs[logs.length-1].day)) dayHistory.push(logs[logs.length-1].day);
-                            needsUpdate = true;
+                            updated = true;
                         }
                     });
-                    if (needsUpdate) { saveState(); renderCombinedCards(); if(document.getElementById('historyPage').style.display === 'flex') renderLogs(); }
+                    if (updated) { saveState(); renderCombinedCards(); if(document.getElementById('historyPage').style.display === 'flex') renderLogs(); }
                 }
             });
         });
+    }
+
+    function calculateTurnoByTimestamp(ts) {
+        const date = new Date(ts);
+        const hour = date.getHours() + (date.getMinutes() / 60);
+        const baseDate = new Date(2025, 11, 29); 
+        const totalWeeks = Math.floor((date - baseDate) / (7*24*60*60*1000)) + 1;
+        const isSingleWeek = totalWeeks % 2 !== 0; 
+        const isAfternoon = (hour >= 14.25); 
+        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
     db.ref('feedback_pending').on('child_added', (snapshot) => {
@@ -291,7 +292,8 @@
             tA: Math.round((startD - item.startA) / 60000),
             tD: Math.round((endT - startD) / 60000),
             st: item.startA, et: endT,
-            c: item.causale || "-", tech: item.techName || item.takenBy || "-",
+            c: item.causale || "-",
+            tech: item.techName || item.takenBy || "-",
             t: item.turno || calculateTurnoByTimestamp(item.startA),
             hideFromBoard: item.hideFromBoard || false
         };
@@ -308,15 +310,12 @@
 
     function renderCombinedCards() {
         const list = document.getElementById('activeList'); list.innerHTML = '';
-        const now = Date.now();
-        
-        // 分离：进行中任务 (显示全部)
+        const now = Date.now(); 
+
         const cloudActive = Object.keys(cloudData).map(id => ({ id, ...cloudData[id], isLocal: false, sortTime: cloudData[id].startA }));
-        
-        // 分离：本地已完成任务 (主页只取前 10 条)
         const localDone = logs.filter(l => !l.hideFromBoard).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true, sortTime: l.et
-        })).sort((a,b) => b.sortTime - a.sortTime).slice(0, 10);
+        })).sort((a,b) => b.sortTime - a.sortTime).slice(0, 10); // 修改点：只取前10条已结束任务
 
         const all = [...cloudActive, ...localDone].sort((a, b) => {
             const aAnn = String(a.causale).includes("ANNULATO"); const bAnn = String(b.causale).includes("ANNULATO");
@@ -328,7 +327,7 @@
             const isAnnulato = String(item.causale).includes("ANNULATO");
             let waitMin = item.isLocal ? item.tA : Math.round((now-item.startA)/60000);
             let workMin = item.isLocal ? item.tD : (item.startB ? Math.round((now-item.startB)/60000) : 0);
-            let startStr = item.startTimeStr || new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            let startTStr = item.startTimeStr || new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             let statusL, colorC, statusK;
             if(item.status === 'orange') { statusL = 'ATTESA'; colorC = 'orange'; statusK = 'waiting'; }
             else if(item.status === 'red' || item.status === 'finishing') { statusL = 'LAVORO'; colorC = 'red'; statusK = 'working'; }
@@ -340,10 +339,10 @@
             if (isAnnulato) {
                 card.innerHTML = `<div class="card-left"><div class="card-linea" style="font-size: 18px; color: var(--text-sec);">${item.id}</div></div>
                     <div class="card-center" style="border:none; text-align: center;"><div style="font-size: 11px; font-weight: 700; color: var(--text-sec);">ANNULLATO</div></div>
-                    <div class="card-right" style="min-width: 50px;"><div style="font-size: 10px; color: var(--text-sec);">${startStr}</div></div>`;
+                    <div class="card-right" style="min-width: 50px;"><div style="font-size: 10px; color: var(--text-sec);">${startTStr}</div></div>`;
             } else {
                 card.innerHTML = `<div class="card-left"><div class="card-badge bg-${colorC}">${statusL}</div><div class="card-linea" style="margin-bottom: 20px;">${item.id}</div></div>
-                    <div class="card-center"><div class="card-stats">Inizio: <b>${startStr}</b><br>Attesa: <b>${waitMin}m</b> | Durata: <b>${workMin}m</b><br>Causale: <b>${item.causale||"-"}</b><br>Tecnico: <b>${item.techName||"-"}</b></div></div>
+                    <div class="card-center"><div class="card-stats">Inizio: <b>${startTStr}</b><br>Attesa: <b>${waitMin}m</b> | Durata: <b>${workMin}m</b><br>Causale: <b>${item.causale||"-"}</b><br>Tecnico: <b>${item.techName||"-"}</b></div></div>
                     <div class="card-right"><div class="total-label">Totale</div><div class="total-val">${waitMin+workMin}m</div></div>`;
             }
             list.appendChild(card);
@@ -353,9 +352,9 @@
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") window.location.reload(true); });
 
     setInterval(() => {
-        const hm = new Date().getHours() + ":" + new Date().getMinutes();
+        const d = new Date(); const hm = d.getHours() + ":" + d.getMinutes();
         if (hm === "14:15" || hm === "0:0") window.location.reload(true);
-        syncAndCleanCloud();
+        syncFromCloudHistory();
     }, 30000);
 
     function showHistory() { document.getElementById('historyPage').style.display = 'flex'; renderLogs(); }
@@ -369,8 +368,7 @@
         if(feedbackLogs.length === 0) { container.innerHTML = '<div style="text-align:center;padding:50px;color:#8e8e93;">Nessun feedback presente.</div>'; return; }
         feedbackLogs.forEach(fb => {
             const div = document.createElement('div'); div.className = 'fb-card';
-            const displayTurno = fb.turno || calculateTurnoByTimestamp(fb.timestamp || Date.now());
-            div.innerHTML = `<div class="fb-head"><div class="fb-name">👤 ${fb.attrezzista}</div><div class="fb-score">⭐ ${fb.punteggio}/5</div></div><div class="fb-msg">"${fb.messaggio || "-"}"</div><div class="fb-meta"><span>${displayTurno}</span><span>${fb.data}</span></div>`;
+            div.innerHTML = `<div class="fb-head"><div class="fb-name">👤 ${fb.attrezzista}</div><div class="fb-score">⭐ ${fb.punteggio}/5</div></div><div class="fb-msg">"${fb.messaggio || "-"}"</div><div class="fb-meta"><span>${fb.data}</span></div>`;
             container.appendChild(div);
         });
     }
@@ -379,12 +377,12 @@
         const container = document.getElementById('logContainer'); container.innerHTML = '';
         const todayStr = new Date().toLocaleDateString('it-IT');
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
-            const dayLogs = logs.filter(l => l.day === day);
+            const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
             const countA = dayLogs.filter(l => l.t === "Turno A" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("CHIUSURA")).length;
             const countB = dayLogs.filter(l => l.t === "Turno B" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("CHIUSURA")).length;
             const isToday = (day === todayStr);
             const section = document.createElement('div');
-            // 修改点：展开今天，标题显示 A|B 统计
+            // 修改点：展开今天内容，显示 A|B 统计
             section.innerHTML = `
                 <div class="day-header" onclick="toggleDay(this)">
                     <div><span style="color:var(--red); margin-right:12px;" onclick="deleteDay(event, '${day}')">×</span><span>${day} ${isToday ? '(OGGI)' : ''}</span></div>
@@ -393,7 +391,7 @@
                 <div class="day-content" style="display: ${isToday ? 'block' : 'none'}">
                     <table>
                         <thead><tr><th style="width:18%">LINEA</th><th style="width:13%">ATTESA</th><th style="width:13%">DURATA</th><th style="width:36%">CAUSALE</th><th style="width:20%">NOME</th></tr></thead>
-                        <tbody>${dayLogs.sort((a,b)=>b.st-a.st).map(l => `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td><td style="font-size:9px">${l.c}</td><td class="tech-cell">${l.tech}</td></tr>`).join('')}</tbody>
+                        <tbody>${dayLogs.map(l => `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td><td style="font-size:9px">${l.c}</td><td class="tech-cell">${l.tech}</td></tr>`).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
@@ -401,9 +399,9 @@
     }
 
     function toggleDay(header) { const content = header.nextElementSibling; const arrow = header.querySelector('.arrow-icon'); const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; arrow.innerText = isHidden ? '▼' : '▶'; }
-    function deleteDay(e, day) { e.stopPropagation(); if(!confirm("Cancellare i dati del " + day + "?")) return; logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; }); dayHistory = dayHistory.filter(d => d !== day); saveState(); renderLogs(); renderCombinedCards(); }
+    function deleteDay(e, day) { e.stopPropagation(); if(!confirm("Cancellare i dati del " + day + "?")) return; logs = logs.filter(l => l.day !== day); dayHistory = dayHistory.filter(d => d !== day); processedStarts = new Set(logs.map(l => l.st)); saveState(); renderLogs(); renderCombinedCards(); }
     
-    // 修改：只清除 2 天前的本地数据
+    // 修改点：SVUOTA 只清除 2 天前的本地数据
     function clearAll() { 
         if(!confirm("Cancellare tutti i record locali oltre 2 giorni?")) return; 
         const today = new Date().toLocaleDateString('it-IT');
@@ -415,7 +413,7 @@
     }
 
     document.getElementById('curYear').innerText = new Date().getFullYear();
-    syncAndCleanCloud();
+    syncFromCloudHistory();
 </script>
 </body>
 </html>
