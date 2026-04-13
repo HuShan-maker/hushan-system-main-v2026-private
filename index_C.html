@@ -88,7 +88,6 @@
         }
         .fb-read-btn:active { transform: scale(0.95); opacity: 0.7; }
 
-        /* 统一的底部清除按钮样式：窄宽度、上移避开苹果 Home 杆 */
         .fb-clear-btn {
             width: 60%; 
             max-width: 160px; 
@@ -186,38 +185,28 @@
     }
     autoCleanOldRecords();
 
-    function calculateTurnoByTimestamp(ts) {
-        const date = new Date(ts);
-        const hour = date.getHours() + (date.getMinutes() / 60);
-        const baseDate = new Date(2025, 11, 29); 
-        const totalWeeks = Math.floor((date - baseDate) / (7*24*60*60*1000)) + 1;
-        const isSingleWeek = totalWeeks % 2 !== 0; 
-        const isAfternoon = (hour >= 14.25); 
-        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
-    }
-
-    // --- 核心逻辑 1: 静默同步 Firebase 历史记录 ---
+    // --- 核心逻辑：从 Firebase 同步历史 ---
     function syncFromCloudHistory() {
         const today = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         const daysToSync = [yesterday, today];
-        let needsUpdate = false;
 
-        // 自动清理云端 2 天前的旧路径 (由第一个进入的 C 端执行)
+        // 自动清理云端旧路径 (只留今天和昨天)
         db.ref('history').once('value').then(snap => {
-            const allDays = snap.val();
-            if (allDays) {
-                Object.keys(allDays).forEach(dateStr => {
+            const all = snap.val();
+            if (all) {
+                Object.keys(all).forEach(dateStr => {
                     if (!daysToSync.includes(dateStr)) db.ref(`history/${dateStr}`).remove();
                 });
             }
         });
 
-        // 补全本地漏掉的记录
+        // 拉取云端补全本地漏掉的记录
         daysToSync.forEach(dateStr => {
             db.ref(`history/${dateStr}`).once('value').then(snapshot => {
                 const dayData = snapshot.val();
                 if (dayData) {
+                    let needsUpdate = false;
                     Object.keys(dayData).forEach(idKey => {
                         const item = dayData[idKey];
                         if (!processedStarts.has(item.startA)) {
@@ -239,10 +228,20 @@
                             needsUpdate = true;
                         }
                     });
-                    if (needsUpdate) { saveState(); if(document.getElementById('historyPage').style.display === 'flex') renderLogs(); }
+                    if (needsUpdate) { saveState(); renderCombinedCards(); if(document.getElementById('historyPage').style.display === 'flex') renderLogs(); }
                 }
             });
         });
+    }
+
+    function calculateTurnoByTimestamp(ts) {
+        const date = new Date(ts);
+        const hour = date.getHours() + (date.getMinutes() / 60);
+        const baseDate = new Date(2025, 11, 29); 
+        const totalWeeks = Math.floor((date - baseDate) / (7*24*60*60*1000)) + 1;
+        const isSingleWeek = totalWeeks % 2 !== 0; 
+        const isAfternoon = (hour >= 14.25); 
+        return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
     db.ref('feedback_pending').on('child_added', (snapshot) => {
@@ -256,9 +255,7 @@
         }
     });
 
-    function getRealTimeTurno() {
-        return calculateTurnoByTimestamp(Date.now());
-    }
+    function getRealTimeTurno() { return calculateTurnoByTimestamp(Date.now()); }
 
     function updateHeaderTurno() { document.getElementById('turnoDisp').innerText = getRealTimeTurno(); }
     updateHeaderTurno(); setInterval(updateHeaderTurno, 60000);
@@ -271,7 +268,6 @@
 
         Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
-            
             const taskTurno = item.turno || calculateTurnoByTimestamp(item.startA);
             const taskDay = new Date(item.startA).toLocaleDateString('it-IT');
 
@@ -320,29 +316,25 @@
 
     function renderCombinedCards() {
         const list = document.getElementById('activeList'); list.innerHTML = '';
-        const now = Date.now(); const todayStr = new Date().toLocaleDateString('it-IT');
-        const currentTurno = getRealTimeTurno();
-
-        const localToDisplay = logs.filter(l => l.day === todayStr && l.t === currentTurno && !l.hideFromBoard).map(l => ({
-            id: l.i, status: 'completed', startA: l.st, endT: l.et, causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true, sortTime: l.et || l.st, startTimeStr: l.s
-        }));
-
-        const cloudItems = Object.keys(cloudData).filter(id => {
+        const now = Date.now();
+        
+        // 分离进行中任务和已结束任务
+        const cloudActive = Object.keys(cloudData).map(id => {
             const item = cloudData[id];
-            const tDay = new Date(item.startA).toLocaleDateString('it-IT');
-            const tTurno = item.turno || calculateTurnoByTimestamp(item.startA);
-            return tDay === todayStr && tTurno === currentTurno && !item.hideFromBoard;
-        }).map(id => {
-            const item = cloudData[id];
-            return { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+            return { id: id, ...item, isLocal: false, sortTime: item.startA, startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
         });
 
-        const all = [...localToDisplay, ...cloudItems].sort((a, b) => {
+        const localCompleted = logs.filter(l => !l.hideFromBoard).map(l => ({
+            id: l.i, status: 'completed', startA: l.st, endT: l.et, causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true, sortTime: l.et || l.st, startTimeStr: l.s
+        })).sort((a,b) => b.sortTime - a.sortTime);
+
+        // 已结束任务只取最后10条
+        const restrictedCompleted = localCompleted.slice(0, 10);
+
+        // 合并显示
+        const all = [...cloudActive, ...restrictedCompleted].sort((a, b) => {
             const aAnn = String(a.causale).includes("ANNULATO"); const bAnn = String(b.causale).includes("ANNULATO");
             if (aAnn && !bAnn) return 1; if (!aAnn && bAnn) return -1;
-            const bTo = (!b.isLocal && b.status === 'orange' && Math.round((Date.now() - b.startA) / 60000) >= 15);
-            const aTo = (!a.isLocal && a.status === 'orange' && Math.round((Date.now() - a.startA) / 60000) >= 15);
-            if (aTo && !bTo) return -1; if (!aTo && bTo) return 1;
             return b.sortTime - a.sortTime;
         });
 
@@ -356,7 +348,6 @@
             else { statusL = 'FINE'; colorC = 'black'; statusK = 'completed'; }
             const card = document.createElement('div');
             card.className = `card st-${isAnnulato ? 'annulato' : statusK}`;
-            if(!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
             if (isAnnulato) {
                 card.innerHTML = `<div class="card-left"><div class="card-linea" style="font-size: 18px; color: var(--text-sec);">${item.id}</div></div>
                     <div class="card-center" style="border:none; text-align: center;"><div style="font-size: 11px; font-weight: 700; color: var(--text-sec);">ANNULLATO DA OPERATORE</div></div>
@@ -371,21 +362,14 @@
     }
 
     document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-            const currentTurno = getRealTimeTurno();
-            const todayStr = new Date().toLocaleDateString('it-IT');
-            const hasObsolete = logs.some(l => (l.day !== todayStr || l.t !== currentTurno) && !l.hideFromBoard);
-            if(hasObsolete) {
-                window.location.reload(true);
-            }
-        }
+        if (document.visibilityState === "visible") window.location.reload(true);
     });
 
     setInterval(() => {
         const d = new Date();
         const hm = d.getHours() + ":" + d.getMinutes();
         if (hm === "14:15" || hm === "0:0") window.location.reload(true);
-        syncFromCloudHistory(); // 每30秒同步一次云端漏掉的数据
+        syncFromCloudHistory(); // 每30秒尝试一次补全同步
     }, 30000);
 
     function showHistory() { document.getElementById('historyPage').style.display = 'flex'; renderLogs(); }
@@ -407,24 +391,20 @@
 
     function renderLogs() {
         const container = document.getElementById('logContainer'); container.innerHTML = '';
-        const todayStr = new Date().toLocaleDateString('it-IT');
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
-            const countA = dayLogs.filter(l => l.t === "Turno A" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("CHIUSURA")).length;
-            const countB = dayLogs.filter(l => l.t === "Turno B" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("CHIUSURA")).length;
-            const isToday = (day === todayStr);
             const section = document.createElement('div');
             section.innerHTML = `
                 <div class="day-header" onclick="toggleDay(this)">
-                    <div><span style="color:var(--red); margin-right:12px;" onclick="deleteDay(event, '${day}')">×</span><span>${day} ${isToday ? '(OGGI)' : ''}</span></div>
-                    <div class="day-stats-box">A: <b>${countA}</b> | B: <b>${countB}</b> <span class="arrow-icon">${isToday ? '▼' : '▶'}</span></div>
+                    <div><span style="color:var(--red); margin-right:12px;" onclick="deleteDay(event, '${day}')">×</span><span>${day}</span></div>
+                    <div class="day-stats-box">Total: <b>${dayLogs.length}</b> <span class="arrow-icon">▶</span></div>
                 </div>
-                <div class="day-content" style="display: ${isToday ? 'block' : 'none'}">
+                <div class="day-content" style="display: none">
                     <table>
                         <thead><tr><th style="width:18%">LINEA</th><th style="width:13%">ATTESA</th><th style="width:13%">DURATA</th><th style="width:36%">CAUSALE</th><th style="width:20%">NOME</th></tr></thead>
                         <tbody>${dayLogs.map(l => {
                             const isAnn = String(l.c).includes("ANNULATO");
-                            return `<tr><td><b>${l.i === 'FUORI' ? 'F. LINEA' : l.i}</b></td><td>${isAnn ? '-' : l.tA+'m'}</td><td>${isAnn ? '-' : l.tD+'m'}</td>
+                            return `<tr><td><b>${l.i}</b></td><td>${isAnn ? '-' : l.tA+'m'}</td><td>${isAnn ? '-' : l.tD+'m'}</td>
                             <td style="font-size:9px">${l.c}<br><span style="color:#8e8e93; font-size:8px;">[${l.t}]</span></td>
                             <td class="tech-cell">${l.tech || '-'}</td></tr>`
                         }).join('')}</tbody>
@@ -437,24 +417,20 @@
     function toggleDay(header) { const content = header.nextElementSibling; const arrow = header.querySelector('.arrow-icon'); const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; arrow.innerText = isHidden ? '▼' : '▶'; }
     function deleteDay(e, day) { e.stopPropagation(); if(!confirm("Cancellare i dati del " + day + "?")) return; logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; }); dayHistory = dayHistory.filter(d => d !== day); saveState(); renderLogs(); renderCombinedCards(); }
     
-    // --- 核心逻辑 2: 清理旧数据 (保留最近两天) ---
+    // --- 修改：清理 2 天前的本地数据 ---
     function clearAll() { 
-        if(!confirm("Cancellare tutti i record TRANNE gli ultimi 2 giorni?")) return; 
+        if(!confirm("Cancellare tutti i record locali oltre 2 giorni?")) return; 
         const today = new Date().toLocaleDateString('it-IT');
         const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('it-IT');
-        const keepDays = [today, yesterday];
-
-        logs = logs.filter(l => keepDays.includes(l.day));
-        dayHistory = dayHistory.filter(d => keepDays.includes(d));
+        logs = logs.filter(l => l.day === today || l.day === yesterday);
+        dayHistory = dayHistory.filter(d => d === today || d === yesterday);
         processedStarts = new Set(logs.map(l => l.st));
-        
-        saveState(); 
-        renderLogs(); 
-        renderCombinedCards(); 
+        saveState(); renderLogs(); renderCombinedCards(); 
     }
 
     document.getElementById('curYear').innerText = new Date().getFullYear();
-    syncFromCloudHistory(); // 页面加载时执行一次同步
+    syncFromCloudHistory(); // 启动同步
 </script>
 </body>
 </html>
+
