@@ -33,6 +33,7 @@
 
         #activeList { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 10px 15px; align-items: center; }
 
+        /* 正常任务卡片保持原样大尺寸 */
         .card { 
             background: var(--white); border-radius: 20px; padding: 15px 18px;
             display: flex; align-items: center; 
@@ -43,7 +44,15 @@
         .card.st-waiting { border-color: var(--orange); }
         .card.st-working { border-color: var(--red); }
         .card.st-completed { border-color: var(--black); }
-        .card.st-annulato { min-height: 55px !important; background: #fafafa; border-color: #e5e5ea; opacity: 0.8; }
+
+        /* 精准缩小被取消任务的卡片高度 */
+        .card.st-annulato { 
+            min-height: 45px !important; 
+            padding: 8px 18px !important;
+            background: #fafafa; 
+            border-color: #e5e5ea; 
+            opacity: 0.8; 
+        }
 
         .card-left { display: flex; flex-direction: column; gap: 6px; flex: 0.7; min-width: 80px; justify-content: center; align-items: flex-start; }
         .card-badge { font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; color: #fff; letter-spacing: 0.3px; white-space: nowrap; }
@@ -192,25 +201,20 @@
 
     function getRealTimeTurno() { return calculateTurnoByTimestamp(Date.now()); }
 
-    // --- 核心升级：强行同步今日历史并清理 Firebase ---
     function syncAndCleanCloud() {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
         const yesterday = new Date(now - 86400000).toISOString().split('T')[0];
 
-        // 1. 自动清理 Firebase 上的旧数据（只留今天和昨天）
         db.ref('history').once('value').then(snapshot => {
-            const allHistory = snapshot.val();
-            if (allHistory) {
-                Object.keys(allHistory).forEach(dateKey => {
-                    if (dateKey !== today && dateKey !== yesterday) {
-                        db.ref(`history/${dateKey}`).remove();
-                    }
+            const all = snapshot.val();
+            if (all) {
+                Object.keys(all).forEach(dateKey => {
+                    if (dateKey !== today && dateKey !== yesterday) db.ref(`history/${dateKey}`).remove();
                 });
             }
         });
 
-        // 2. 强行拉取这两天的历史记录补全本地存档
         [yesterday, today].forEach(dateStr => {
             db.ref(`history/${dateStr}`).once('value').then(snap => {
                 const dayData = snap.val();
@@ -236,11 +240,7 @@
                             needsSave = true;
                         }
                     });
-                    if (needsSave) {
-                        saveState();
-                        renderCombinedCards();
-                        if(document.getElementById('historyPage').style.display === 'flex') renderLogs();
-                    }
+                    if (needsSave) { saveState(); renderCombinedCards(); if(document.getElementById('historyPage').style.display === 'flex') renderLogs(); }
                 }
             });
         });
@@ -279,7 +279,7 @@
 
         const cloudItems = Object.keys(cloudData).map(id => {
             const item = cloudData[id];
-            return { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+            return { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.status === 'red' ? (item.startD || item.startB || item.startA) : item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
         });
 
         const all = [...localToDisplay, ...cloudItems].sort((a, b) => {
@@ -291,7 +291,7 @@
         all.forEach(item => {
             const isAnnulato = String(item.causale).includes("ANNULATO");
             let waitMin = item.isLocal ? item.tA : Math.round((now-item.startA)/60000);
-            let workMin = item.isLocal ? item.tD : (item.startB ? Math.round((now-item.startB)/60000) : 0);
+            let workMin = item.isLocal ? item.tD : (item.startB || item.startD ? Math.round((now-(item.startD||item.startB))/60000) : 0);
             let statusL, colorC, statusK;
             if(item.status === 'orange') { statusL = 'ATTESA'; colorC = 'orange'; statusK = 'waiting'; }
             else if(item.status === 'red' || item.status === 'finishing') { statusL = 'LAVORO'; colorC = 'red'; statusK = 'working'; }
@@ -299,12 +299,22 @@
             
             const card = document.createElement('div');
             card.className = `card st-${isAnnulato ? 'annulato' : statusK}`;
+            
             if (isAnnulato) {
-                card.innerHTML = `<div class="card-left"><div class="card-linea" style="font-size: 18px; color: var(--text-sec);">${item.id}</div></div>
-                    <div class="card-center" style="border:none; text-align: center;"><div style="font-size: 11px; font-weight: 700; color: var(--text-sec);">ANNULLATO</div></div>
-                    <div class="card-right" style="min-width: 50px;"><div style="font-size: 10px; color: var(--text-sec);">${item.startTimeStr}</div></div>`;
+                // 缩小后的取消卡片
+                card.innerHTML = `
+                    <div class="card-left">
+                        <div class="card-linea" style="font-size: 16px; color: var(--text-sec);">${item.id}</div>
+                    </div>
+                    <div class="card-center" style="border:none; text-align: center;">
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-sec); text-transform: uppercase;">ANNULATO DA OPERATORE</div>
+                    </div>
+                    <div class="card-right" style="min-width: 50px;">
+                        <div style="font-size: 9px; color: var(--text-sec); font-weight: 700;">${item.startTimeStr}</div>
+                    </div>`;
             } else {
-                card.innerHTML = `<div class="card-left"><div class="card-badge bg-${colorC}">${statusL}</div><div class="card-linea" style="margin-bottom: 20px;">${item.id}</div></div>
+                // 正常的任务卡片
+                card.innerHTML = `<div class="card-left"><div class="card-badge bg-${colorC}">${statusL}</div><div class="card-linea">${item.id}</div></div>
                     <div class="card-center"><div class="card-stats">Inizio: <b>${item.startTimeStr}</b><br>Attesa: <b>${waitMin}m</b> | Durata: <b>${workMin}m</b><br>Causale: <b>${item.causale||"-"}</b><br>Tecnico: <b>${item.techName||item.takenBy||"-"}</b></div></div>
                     <div class="card-right"><div class="total-label">Totale</div><div class="total-val">${waitMin+workMin}m</div></div>`;
             }
@@ -327,17 +337,21 @@
         const todayStr = new Date().toLocaleDateString('it-IT');
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
+            const countA = dayLogs.filter(l => l.t === "Turno A" && !String(l.c).includes("ANNULATO")).length;
+            const countB = dayLogs.filter(l => l.t === "Turno B" && !String(l.c).includes("ANNULATO")).length;
             const isToday = (day === todayStr);
             const section = document.createElement('div');
             section.innerHTML = `
                 <div class="day-header" onclick="toggleDay(this)">
                     <div><span style="color:var(--red); margin-right:12px;" onclick="deleteDay(event, '${day}')">×</span><span>${day}</span></div>
-                    <div class="day-stats-box"><span class="arrow-icon">${isToday ? '▼' : '▶'}</span></div>
+                    <div class="day-stats-box">A: <b>${countA}</b> | B: <b>${countB}</b> <span class="arrow-icon">${isToday ? '▼' : '▶'}</span></div>
                 </div>
                 <div class="day-content" style="display: ${isToday ? 'block' : 'none'}">
                     <table>
                         <thead><tr><th>LINEA</th><th>ATTESA</th><th>DURATA</th><th>CAUSALE</th><th>NOME</th></tr></thead>
-                        <tbody>${dayLogs.map(l => `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td><td>${l.c}</td><td class="tech-cell">${l.tech}</td></tr>`).join('')}</tbody>
+                        <tbody>${dayLogs.map(l => `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td>
+                            <td style="font-size:9px">${l.c}<br><span style="color:#8e8e93; font-size:8px;">[${l.t}]</span></td>
+                            <td class="tech-cell">${l.tech}</td></tr>`).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
