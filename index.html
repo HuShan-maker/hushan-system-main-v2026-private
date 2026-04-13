@@ -107,7 +107,7 @@
                 } else if (role === 'c') {
                     window.location.replace('index_C.html');
                 }
-            }, 800); // 800ms 足够识别 manifest，且不会让用户等得心烦
+            }, 8000); // 800ms 足够识别 manifest，且不会让用户等得心烦
         } else {
             // 如果没有 role 参数，说明是你在调试或直接访问，展示三段入口
             document.getElementById('devMenu').style.display = 'flex';
