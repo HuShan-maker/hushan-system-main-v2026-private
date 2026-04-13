@@ -23,10 +23,10 @@
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; flex-shrink: 0; }
         .title-area h1 { font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
         
-        /* 修改点：Turno 颜色加深为深蓝色 */
+        /* 修改点：Turno 颜色改为稍浅的暗夜蓝 */
         .turno-badge { 
             font-size: 11px; font-weight: 800; color: #ffffff; 
-            background: #3399ff; padding: 3px 10px; border-radius: 8px; 
+            background: #1a2b4c; padding: 3px 10px; border-radius: 8px; 
             margin-top: 4px; text-transform: uppercase; display: inline-block;
         }
 
@@ -81,7 +81,6 @@
         th { font-weight: 700; color: var(--text-sec); text-transform: uppercase; font-size: 9px; }
         .tech-cell { font-size: 10px; font-weight: 600; color: var(--text-main); word-break: break-all; }
 
-        /* 修改点：Feedback 按钮下降 20px (改为 margin-top: 20px) */
         .fb-read-btn {
             background: #e5e5ea; color: #000; border: none; padding: 12px 25px;
             border-radius: 20px; font-weight: 800; font-size: 10px;
@@ -90,23 +89,27 @@
         }
         .fb-read-btn:active { transform: scale(0.95); opacity: 0.7; }
 
-        /* 修改点：Archivio 清除按钮下降 50px (改为 margin-bottom: 110px) */
+        /* 修改点：清除按钮锁定底部左右 */
         .fb-clear-btn {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
             width: 60%; 
             max-width: 160px; 
-            padding: 10px; 
+            padding: 12px; 
             border-radius: 12px; 
             border: none; 
             background: #e5e5ea; 
-            color: #000000; 
+            color: var(--red); 
             font-weight: 800; 
             font-size: 11px;
             text-transform: uppercase; 
             cursor: pointer;
-            transition: 0.2s;
-            margin-bottom: 110px; 
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            z-index: 1000;
         }
-        .fb-clear-btn:active { transform: scale(0.95); opacity: 0.8; }
+        .fb-clear-btn:active { transform: translateX(-50%) scale(0.95); opacity: 0.8; }
 
         .footer-text { text-align: center; padding: 10px 0 20px 0; font-size: 10px; font-weight: 800; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; width: 100%; }
     </style>
@@ -135,10 +138,8 @@
             <h2 style="font-size:15px; font-weight:700; margin:0;">RECORD LOCALI</h2>
             <div style="width:28px"></div>
         </div>
-        <div id="logContainer"></div>
-        <div style="padding:15px; display: flex; justify-content: center;">
-            <button class="fb-clear-btn" style="color:var(--red);" onclick="clearAll()">SVUOTA VECCHI</button>
-        </div>
+        <div id="logContainer" style="padding-bottom: 120px;"></div>
+        <button class="fb-clear-btn" onclick="clearAll()">SVUOTA VECCHI</button>
     </div>
 
     <div id="feedbackPage">
@@ -149,7 +150,7 @@
         </div>
         <div id="feedbackContainer"></div>
         <div style="padding:15px 15px 0 15px; display: flex; justify-content: center;">
-            <button class="fb-clear-btn" onclick="clearFeedback()">SVUOTA FEEDBACK</button>
+            <button class="fb-clear-btn" style="position:relative; bottom: 20px;" onclick="clearFeedback()">SVUOTA FEEDBACK</button>
         </div>
     </div>
 
@@ -187,7 +188,6 @@
     }
     autoCleanOldRecords();
 
-    // 静默同步云端补齐历史记录并自动清理旧路径
     function syncAndCleanCloud() {
         const today = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -310,18 +310,11 @@
     function renderCombinedCards() {
         const list = document.getElementById('activeList'); list.innerHTML = '';
         const now = Date.now();
-        
         const cloudActive = Object.keys(cloudData).map(id => ({ id, ...cloudData[id], isLocal: false, sortTime: cloudData[id].startA }));
-        
-        // 修改点：主页保留10条逻辑，优先删除 Annullato
         const localDone = logs.filter(l => !l.hideFromBoard).map(l => ({
             id: l.i, status: 'completed', startA: l.st, endT: l.et, causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true, sortTime: l.et
-        })).sort((a,b) => {
-            // 先按时间排，最新的在前
-            return b.sortTime - a.sortTime;
-        });
+        })).sort((a,b) => b.sortTime - a.sortTime);
 
-        // 筛选逻辑：如果超过10条，优先从旧的里面踢掉 annullato 的
         let restrictedCompleted = localCompletedFinalFilter(localDone);
 
         const all = [...cloudActive, ...restrictedCompleted].sort((a, b) => {
@@ -356,31 +349,15 @@
         });
     }
 
-    // 辅助筛选函数：优先删除已取消的
     function localCompletedFinalFilter(items) {
         if (items.length <= 10) return items;
-        // 先按时间排序确保逻辑正确
         let temp = [...items];
-        // 尝试从最旧的开始，如果它是 annullato 就删除，直到剩下 10 条或删完 annullato
-        let annIndexes = [];
-        temp.forEach((item, idx) => { if(String(item.causale).includes("ANNULATO")) annIndexes.push(idx); });
-        
-        // 如果有 annullato，从最旧的 annullato 开始删
-        let result = [];
         let toRemoveCount = temp.length - 10;
         let removedCount = 0;
-
-        // 倒着删 (最旧的在最后)
         for(let i = temp.length - 1; i >= 0 && removedCount < toRemoveCount; i--) {
-            if(String(temp[i].causale).includes("ANNULATO")) {
-                temp.splice(i, 1);
-                removedCount++;
-            }
+            if(String(temp[i].causale).includes("ANNULATO")) { temp.splice(i, 1); removedCount++; }
         }
-        // 如果删完了 annullato 还没够，就删最旧的
-        while(temp.length > 10) {
-            temp.pop();
-        }
+        while(temp.length > 10) { temp.pop(); }
         return temp;
     }
 
@@ -434,7 +411,16 @@
 
     function toggleDay(header) { const content = header.nextElementSibling; const arrow = header.querySelector('.arrow-icon'); const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; arrow.innerText = isHidden ? '▼' : '▶'; }
     function deleteDay(e, day) { e.stopPropagation(); if(!confirm("Cancellare i dati del " + day + "?")) return; logs = logs.filter(l => l.day !== day); dayHistory = dayHistory.filter(d => d !== day); processedStarts = new Set(logs.map(l => l.st)); saveState(); renderLogs(); renderCombinedCards(); }
-    function clearAll() { if(!confirm("Cancellare tutti i record locali oltre 2天?")) return; const today = new Date().toLocaleDateString('it-IT'); const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('it-IT'); logs = logs.filter(l => l.day === today || l.day === yesterday); dayHistory = dayHistory.filter(d => d === today || d === yesterday); processedStarts = new Set(logs.map(l => l.st)); saveState(); renderLogs(); renderCombinedCards(); }
+    
+    function clearAll() { 
+        if(!confirm("Cancellare tutti i record locali oltre 2 giorni?")) return; 
+        const today = new Date().toLocaleDateString('it-IT');
+        const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('it-IT');
+        logs = logs.filter(l => l.day === today || l.day === yesterday);
+        dayHistory = dayHistory.filter(d => d === today || d === yesterday);
+        processedStarts = new Set(logs.map(l => l.st));
+        saveState(); renderLogs(); renderCombinedCards(); 
+    }
 
     document.getElementById('curYear').innerText = new Date().getFullYear();
     syncAndCleanCloud();
