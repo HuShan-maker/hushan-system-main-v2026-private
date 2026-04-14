@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Attrezzisti v8</title>
+    <title>B - Attrezzisti v9.0 Cambio Edition</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -19,6 +19,7 @@
             --btn-gray: #f2f2f7; 
             --locked-gray-red: #bb8888; 
             --green: #34c759;
+            --cambio-blue: #5856d6; /* 换单专用暗夜蓝 */
         }
         * { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         
@@ -28,7 +29,6 @@
             margin: 0; transition: background 0.4s, opacity 0.4s; overflow-x: hidden; touch-action: pan-y; 
         }
 
-        /* 顶部班次标签 */
         .turno-badge { 
             font-size: 11px; font-weight: 800; color: #fff; 
             background: #8e8e93; 
@@ -44,25 +44,38 @@
         .user-subtitle { font-size: 14px; color: #8e8e93; font-weight: 600; margin-top: 5px; height: 25px; display: flex; align-items: center; cursor: pointer; min-width: 50px; }
         .reg-btn { background: #000; color: #fff; font-size: 11px; border: none; padding: 0 14px; border-radius: 9px; font-weight: 700; text-transform: uppercase; height: 25px; display: flex; align-items: center; }
         
-        /* 钢琴按钮 */
         .pianos { display: flex; gap: 5px; margin-bottom: 25px; padding: 12px 0 8px 0; overflow: visible; }
         .p-btn { flex: 1; background: var(--btn-gray); color: #8e8e93; border: none; padding: 10px 0; border-radius: 12px; font-weight: 700; font-size: 10px; transition: 0.2s; position: relative; }
         .p-btn.active { color: #fff !important; }
         .p-badge { position: absolute; top: -5px; right: -5px; background: var(--red); width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; animation: badgePulse 1.5s infinite; border: 2px solid white; }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        /* 网格动画 */
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
         .slide-right { transform: translateX(30px); opacity: 0; }
         
         .btn-wrap { position: relative; width: 100%; aspect-ratio: 1/1; }
-        .btn-machine { width: 100%; height: 100%; border: none; border-radius: 24px; font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: all 0.3s; }
+        .btn-machine { 
+            width: 100%; height: 100%; border: none; border-radius: 24px; 
+            font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: all 0.3s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        
+        /* 换单款式小标签样式 */
+        .modello-tag { 
+            font-size: 9px; font-weight: 700; background: rgba(255,255,255,0.25); 
+            padding: 1px 5px; border-radius: 4px; margin-top: 3px; 
+            max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
         .locked-btn { background: var(--locked-gray-red) !important; color: rgba(255, 255, 255, 0.8) !important; opacity: 0.8; pointer-events: none; }
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
+        
+        /* 换单状态卡片样式 */
+        .waiting-cambio { background: var(--cambio-blue) !important; color: #fff !important; box-shadow: 0 0 15px rgba(88,86,214,0.3) !important; border: 2px solid rgba(255,255,255,0.4); }
 
         @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
         @keyframes pulseOrange { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.96); opacity: 0.7; } }
@@ -75,42 +88,25 @@
         
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         .v-nav { display: flex; align-items: center; height: 60px; padding: 0 10px; background: #fff; border-bottom: 1px solid #f2f2f7; flex-shrink: 0; position: relative; }
-        .v-nav-left { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; }
-        .v-nav-center { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .v-nav-right { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
         .back-arrow { font-size: 30px; cursor: pointer; padding: 10px; line-height: 1; }
         .v-h2 { font-size: 13px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; white-space: nowrap; letter-spacing: -0.2px; }
-        .v-user-tag { font-size: 11px; color: #8e8e93; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
         
         #logContainer { flex: 1; overflow-y: auto; padding: 3px 15px 15px 15px; -webkit-overflow-scrolling: touch; }
         .day-header { background: var(--btn-gray); padding: 14px 15px; font-size: 14px; font-weight: 800; color: #000; display: flex; align-items: center; position: sticky; top: 0; z-index: 150; border-radius: 12px; margin-bottom: 15px; min-height: 48px; }
-        .day-del-btn { color: var(--red); font-weight: 900; font-size: 20px; margin-right: 12px; width: 20px; display: none; align-items: center; justify-content: center; line-height: 1; cursor: pointer; }
-        .day-section.collapsed .day-del-btn { display: flex; }
-        .day-header-left { display: flex; align-items: center; flex: 1; }
-        .day-header::after { content: '▼'; font-size: 10px; color: #8e8e93; margin-left: auto; }
-        .day-section.collapsed .day-header::after { content: '▶'; }
-        .day-section.collapsed .day-content { display: none; }
-
+        
         table { width: 100%; border-collapse: collapse; table-layout: fixed; } 
         th, td { padding: 12px 2px; text-align: center; font-size: 14px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
-        th { color: #8e8e93; font-size: 9px; text-transform: uppercase; background: #fff; position: sticky; top: 48px; z-index: 140; }
-        .col-time { text-align: left !important; padding-left: 8px !important; width: 85px; }
-        .time-cell { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; line-height: 1.1; font-size: 13.5px; font-weight: 800; }
-        .t-a { color: var(--orange); }
-        .t-d { color: var(--red); }
         
         .v-footer { flex-shrink: 0; background: #fff; padding: 15px; border-top: 1px solid #f2f2f7; z-index: 250; }
-        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; }
         .bottom-action-btn { border: none; padding: 10px 0; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; flex: 1; max-width: 140px; cursor: pointer; }
-        .export-btn { background: #000; color: #fff; }
-        .clear-btn { background: var(--btn-gray); color: var(--red); border: 1px solid #ddd; }
-        .copy-text { text-align: center; font-size: 11px; color: #000000; margin-top: 5px; font-weight: 800; text-transform: uppercase; }
 
-        .undo-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--btn-gray); border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .del-row { color: var(--red); font-weight: 900; font-size: 20px; text-align: center; cursor: pointer; }
-        .editable-causale { color: #000; display: block; padding: 8px 0; word-wrap: break-word; font-size: 12px; }
+        /* 换单详情弹窗特有样式 */
+        #techModal .modal-content { text-align: left; max-width: 320px; }
+        .tech-info-row { margin-bottom: 12px; border-bottom: 1px solid #f2f2f7; padding-bottom: 8px; }
+        .tech-label { font-size: 10px; color: #8e8e93; font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 2px; }
+        .tech-val { font-size: 15px; font-weight: 700; color: #000; display: block; }
 
-        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal, #techModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
         .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; margin-top: 10px; }
         .modal-input { width: 100%; padding: 15px; text-align: center; border-radius: 12px; border: 1px solid #ddd; outline: none; font-size: 16px; margin-bottom: 10px; }
@@ -141,6 +137,14 @@
 
     <div class="color-picker-wrap" id="pickerContainer"><input type="color" id="floorColor" onchange="updateThemeColor(this.value)"></div>
 
+    <div id="techModal">
+        <div class="modal-content">
+            <h3 id="techModelloTitle" style="margin-top:0; color:var(--cambio-blue);">SCHEDA TECNICA</h3>
+            <div id="techInfoBody"></div>
+            <button class="modal-btn" onclick="document.getElementById('techModal').style.display='none'">OK, PROCEDO</button>
+        </div>
+    </div>
+
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
     <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Attività svolta..."><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
     <div id="editModal"><div class="modal-content"><h3>Modifica Causale</h3><input type="text" id="editCausaleInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="confirmEdit()">AGGIORNA</button></div></div>
@@ -164,7 +168,6 @@
     </div>
 
 <script>
-    // --- 1. Firebase 配置 ---
     const firebaseConfig = {
         apiKey: "AIzaSyAUBXn_liUqQJtp1hucwsuERhZ4oxCdBPg",
         authDomain: "luxottica-app.firebaseapp.com",
@@ -175,16 +178,14 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- 核心安全变量 ---
     let serverTimeOffset = 0;
-    let isPermanentlyLocked = false; // 永久锁死开关
+    let isPermanentlyLocked = false; 
 
     db.ref(".info/serverTimeOffset").on("value", (snap) => {
         serverTimeOffset = snap.val() || 0;
-        checkSecurity(); // 每次同步后校验安全
+        checkSecurity(); 
     });
 
-    // --- 2. 班次逻辑 (基于服务器时间) ---
     function getRealTimeTurno() {
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -196,11 +197,9 @@
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
-    // 安全检查：如果检测到篡改，立即永久锁死
     function checkSecurity() {
         if (isPermanentlyLocked) return;
         const currentTurno = getRealTimeTurno();
-        // 判定：如果计算出的班次与设置的班次不符，视为异常环境（锁死）
         if (myShift !== currentTurno) {
             isPermanentlyLocked = true;
             renderGrid();
@@ -244,28 +243,11 @@
     let logs = JSON.parse(localStorage.getItem('logs_v7') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
     let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
-    let isInitialLoad = true; 
 
-    function autoCleanOldRecords() {
-        const now = new Date(Date.now() + serverTimeOffset);
-        const thirtyDaysAgo = new Date(now);
-        thirtyDaysAgo.setDate(now.getDate() - 30);
-        let needsSave = false;
-        const updatedDayHistory = dayHistory.filter(dayStr => {
-            const [d, m, y] = dayStr.split('/');
-            const recordDate = new Date(y, m - 1, d);
-            if (recordDate < thirtyDaysAgo) { needsSave = true; return false; }
-            return true;
-        });
-        const updatedLogs = logs.filter(l => {
-            const [d, m, y] = l.day.split('/');
-            const recordDate = new Date(y, m - 1, d);
-            if (recordDate < thirtyDaysAgo) { needsSave = true; return false; }
-            return true;
-        });
-        if (needsSave) { logs = updatedLogs; dayHistory = updatedDayHistory; saveState(); }
+    function saveState() { 
+        localStorage.setItem('logs_v7', JSON.stringify(logs)); 
+        localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
     }
-    autoCleanOldRecords();
 
     db.ref('active_calls').on('value', (snapshot) => {
         act = snapshot.val() || {};
@@ -274,74 +256,147 @@
         applyTheme();
     });
 
-    function saveState() { 
-        localStorage.setItem('logs_v7', JSON.stringify(logs)); 
-        localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
+    // --- 核心：换单详情显示逻辑 ---
+    function showTechDetails(modello) {
+        if (!modello) return;
+        db.ref('model_db/' + modello).once('value').then(snap => {
+            const info = snap.val();
+            const body = document.getElementById('techInfoBody');
+            document.getElementById('techModelloTitle').innerText = modello;
+            if (info) {
+                body.innerHTML = `
+                    <div class="tech-info-row"><span class="tech-label">Programma CNC</span><span class="tech-val">${info.programma || '-'}</span></div>
+                    <div class="tech-info-row"><span class="tech-label">Posaggio / Morsa</span><span class="tech-val">${info.posaggio || '-'}</span></div>
+                    <div class="tech-info-row"><span class="tech-label">Utensili / Tools</span><span class="tech-val">${info.tools || '-'}</span></div>
+                    <div class="tech-info-row"><span class="tech-label">Note Tecniche</span><span class="tech-val" style="font-size:12px; color:var(--red);">${info.note || '-'}</span></div>
+                `;
+            } else {
+                body.innerHTML = `<div style="padding:20px; color:#8e8e93;">Dati tecnici non disponibili per questo modello.</div>`;
+            }
+            document.getElementById('techModal').style.display = 'flex';
+        });
     }
 
     function handleMachineClick(id) {
-        if (isPermanentlyLocked) return; // 永久锁死拦截
+        if (isPermanentlyLocked) return; 
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         if (!act[id]) return; 
-        if (act[id].status === 'orange') {
+
+        const task = act[id];
+
+        // 逻辑：如果是橙色（待接单）且是换单，点击时先看资料，不自动抢单（除非再次点击或确认）
+        if (task.status === 'orange') {
+            if (task.causale === 'Cambio' && task.modello) {
+                showTechDetails(task.modello);
+            }
+            // 抢单逻辑
             db.ref('active_calls/' + id).update({ 
                 status: 'red', startD: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName 
             });
         } 
-        else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
-            const item = act[id];
+        else if (task.status === 'red' && task.takenBy === myDeviceId) {
             const now = Date.now() + serverTimeOffset;
-            archiveIntervention(id, item.causale || "-", item.startA, item.startD || item.startA, now, currentUserName);
+            archiveIntervention(id, task.causale || "-", task.startA, task.startD || task.startA, now, currentUserName);
             if (id === 'FUORI') { db.ref('active_calls/FUORI').remove(); }
             else { db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime }); }
         }
     }
 
     function archiveIntervention(id, causale, startA, startD, endT, tech) {
-    const nowServer = new Date(endT);
-    const dateKey = nowServer.toISOString().split('T')[0]; // 格式如 2026-04-14
-    
-    const newLog = { 
-        i: id, day: nowServer.toLocaleDateString('it-IT'), 
-        s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-        tA: Math.round((startD - startA) / 60000), 
-        tD: Math.round((endT - startD) / 60000), 
-        st: startA, c: causale, tech: tech
-    };
-    
-    // 原有逻辑：存本地
-    logs.push(newLog);
-    if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
-    saveState();
+        const nowServer = new Date(endT);
+        const dateKey = nowServer.toISOString().split('T')[0];
+        const newLog = { 
+            i: id, day: nowServer.toLocaleDateString('it-IT'), 
+            s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+            tA: Math.round((startD - startA) / 60000), 
+            tD: Math.round((endT - startD) / 60000), 
+            st: startA, c: causale, tech: tech
+        };
+        logs.push(newLog);
+        if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+        saveState();
 
-    // 新增逻辑：同步到 C 端（如果是 FUORI LINEA 则不发云端）
-    if (id !== 'FUORI') {
-        db.ref(`history/${dateKey}/${id}_${endT}`).set({
-            id: id,
-            startA: startA,
-            startD: startD,
-            endT: endT,
-            causale: causale,
-            techName: tech,
-            status: 'completed',
-            turno: getRealTimeTurno() 
-        });
+        if (id !== 'FUORI') {
+            db.ref(`history/${dateKey}/${id}_${endT}`).set({
+                id: id, startA: startA, startD: startD, endT: endT,
+                causale: causale, techName: tech, status: 'completed',
+                turno: getRealTimeTurno(),
+                modello: act[id]?.modello || ""
+            });
+        }
     }
-}
 
+    function renderGrid() {
+        const gd = document.getElementById('g'); gd.innerHTML = '';
+        const turnoLabel = document.getElementById('turnoDisp');
+        const contentArea = document.getElementById('dynamicContent');
+        const isWorkingTime = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
+        
+        turnoLabel.innerText = myShift;
+        if (isWorkingTime) { contentArea.classList.remove('shift-lock-ui'); turnoLabel.classList.add('turno-on'); } 
+        else { contentArea.classList.add('shift-lock-ui'); turnoLabel.classList.remove('turno-on'); }
 
+        const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
+        const c = themeConfig[curPiano];
+        
+        pianoData[curPiano].forEach(i => {
+            const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
+            const b = document.createElement('button'); 
+            const s = isWorkingTime ? act[i] : null; 
+            
+            b.className = 'btn-machine'; 
+            
+            if (s && (s.status === 'orange' || s.status === 'red')) {
+                if (s.status === 'orange') { 
+                    if(s.causale === 'Cambio') {
+                        b.classList.add('waiting-cambio');
+                        b.innerHTML = `<span>${i}</span><span class="modello-tag">${s.modello || 'CAMBIO'}</span>`;
+                    } else {
+                        b.classList.add('waiting');
+                        b.innerText = i;
+                    }
+                } else { 
+                    if (s.takenBy === myDeviceId) { 
+                        b.classList.add('or'); 
+                        if(s.causale === 'Cambio') {
+                            b.innerHTML = `<span>${i}</span><span class="modello-tag">${s.modello || 'CAMBIO'}</span>`;
+                        } else { b.innerText = i; }
+                    } else { 
+                        b.classList.add('locked-btn'); 
+                        b.innerText = i;
+                    } 
+                }
+            } else { 
+                b.innerText = i;
+                b.style.color = c; 
+                b.style.backgroundColor = 'var(--btn-gray)'; 
+            }
+            
+            b.onclick = () => isWorkingTime && handleMachineClick(i); 
+            wrap.appendChild(b);
+            
+            if (isWorkingTime && s && s.status === 'orange') {
+                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = allOrangeIds.indexOf(i) + 1; wrap.appendChild(badge);
+            }
+            gd.appendChild(wrap);
+        });
+        
+        const f = document.getElementById('btn-fuori');
+        const fs = isWorkingTime ? act['FUORI'] : null;
+        f.className = (fs && fs.status === 'red') ? 'fuori-btn or' : 'fuori-btn';
+        if (!(fs && fs.status === 'red')) f.style.color = c;
+    }
+
+    // --- 其余逻辑保持不变 ---
     function toggleFuori() {
-        if (isPermanentlyLocked) return; // 永久锁死拦截
+        if (isPermanentlyLocked) return;
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         const fs = act['FUORI'];
         if(fs && fs.status === 'red' && fs.takenBy === myDeviceId) {
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
-            db.ref('active_calls/FUORI').set({ 
-                status: 'red', startA: sTime, startB: sTime, startD: sTime, takenBy: myDeviceId, techName: currentUserName,
-                turno: getRealTimeTurno() 
-            });
+            db.ref('active_calls/FUORI').set({ status: 'red', startA: sTime, startB: sTime, startD: sTime, takenBy: myDeviceId, techName: currentUserName, turno: getRealTimeTurno() });
         }
     }
 
@@ -354,56 +409,6 @@
         document.getElementById('fuoriCausaleInput').value = "";
         document.getElementById('fuoriModal').style.display = 'none';
         renderGrid();
-    }
-
-    function renderGrid() {
-        const gd = document.getElementById('g'); gd.innerHTML = '';
-        const turnoLabel = document.getElementById('turnoDisp');
-        const contentArea = document.getElementById('dynamicContent');
-        
-        // 判定：只要被永久锁死，或者物理班次不对，界面全部灰显
-        const isWorkingTime = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
-        
-        turnoLabel.innerText = myShift;
-        if (isWorkingTime) { 
-            contentArea.classList.remove('shift-lock-ui'); 
-            turnoLabel.classList.add('turno-on'); 
-        } else { 
-            contentArea.classList.add('shift-lock-ui'); 
-            turnoLabel.classList.remove('turno-on'); 
-        }
-
-        const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
-        const c = themeConfig[curPiano];
-        
-        pianoData[curPiano].forEach(i => {
-            const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
-            const b = document.createElement('button'); 
-            const s = isWorkingTime ? act[i] : null; 
-            
-            b.className = 'btn-machine'; b.innerText = i;
-            if (s && (s.status === 'orange' || s.status === 'red')) {
-                if (s.status === 'orange') { b.classList.add('waiting'); b.style.color = "#ffffff"; } 
-                else { if (s.takenBy === myDeviceId) { b.classList.add('or'); b.style.color = "#ffffff"; } else { b.classList.add('locked-btn'); } }
-            } else { 
-                b.style.color = c; 
-                b.style.backgroundColor = 'var(--btn-gray)'; 
-            }
-            
-            b.onclick = () => isWorkingTime && handleMachineClick(i); 
-            wrap.appendChild(b);
-            
-            if (isWorkingTime && s && s.status === 'orange') {
-                const qNum = allOrangeIds.indexOf(i) + 1;
-                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = qNum; wrap.appendChild(badge);
-            }
-            gd.appendChild(wrap);
-        });
-        
-        const f = document.getElementById('btn-fuori');
-        const fs = isWorkingTime ? act['FUORI'] : null;
-        f.className = (fs && fs.status === 'red') ? 'fuori-btn or' : 'fuori-btn';
-        if (!(fs && fs.status === 'red')) f.style.color = c;
     }
 
     function updateGlobalBadges() {
@@ -511,19 +516,14 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
-    // --- 终极每10秒安全监控逻辑 ---
     setInterval(() => {
-        // 重新从服务器获取偏移量（质问服务器真时间）
         db.ref(".info/serverTimeOffset").once("value").then((snap) => {
             serverTimeOffset = snap.val() || 0;
-            checkSecurity(); // 执行安全检查
-            
-            // 常规重绘
+            checkSecurity(); 
             renderGrid();
             updateGlobalBadges();
-            console.log("System Check: Security Scan Completed.");
         });
-    }, 10000); // 严格10秒间隔
+    }, 10000);
 </script>
 </body>
 </html>
