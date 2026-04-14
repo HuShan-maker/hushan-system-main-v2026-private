@@ -88,7 +88,6 @@
         }
         .fb-read-btn:active { transform: scale(0.95); opacity: 0.7; }
 
-        /* 统一的底部清除按钮样式：窄宽度、上移避开苹果 Home 杆 */
         .fb-clear-btn {
             width: 60%; 
             max-width: 160px; 
@@ -167,54 +166,40 @@
     let feedbackLogs = JSON.parse(localStorage.getItem('c_feedback_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
-    // 管理 Firebase：删除 2 日前的内容
-function cleanCloudHistory() {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const keepDays = [todayStr, yesterdayStr];
 
-    // 路径指向：maintenance/lastCleanDate
-    const lockRef = db.ref('maintenance/lastCleanDate');
+    // 管理 Firebase：删除 2 日前的内容，第一个开启的 C 端执行
+    function cleanCloudHistory() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const keepDays = [todayStr, yesterdayStr];
+        const lockRef = db.ref('maintenance/lastCleanDate');
 
-    // 使用事务（Transaction）确保只有一个 C 端能抢到清理权
-    lockRef.transaction((currentValue) => {
-        if (currentValue === todayStr) {
-            // 如果已经是今天，返回 undefined 取消事务（代表不需要清理）
-            return; 
-        }
-        // 如果不是今天，更新为今天，继续事务
-        return todayStr;
-    }, (error, committed) => {
-        if (committed) {
-            // 只有抢到“清理权”的 C 端（committed 为 true）才执行以下操作
-            console.log("Sono il primo C-Terminale. Eseguo pulizia Firebase...");
+        lockRef.transaction((currentValue) => {
+            if (currentValue === todayStr) return; 
+            return todayStr;
+        }, (error, committed) => {
+            if (committed) {
+                console.log("Primo avvio rilevato. Pulizia Firebase in corso...");
+                db.ref('history').once('value').then(snap => {
+                    const allHistory = snap.val();
+                    if (allHistory) {
+                        Object.keys(allHistory).forEach(dateFolder => {
+                            if (!keepDays.includes(dateFolder)) {
+                                db.ref(`history/${dateFolder}`).remove();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
 
-            db.ref('history').once('value').then(snap => {
-                const allHistory = snap.val();
-                if (allHistory) {
-                    Object.keys(allHistory).forEach(dateFolder => {
-                        // 删除前天及以前的文件夹
-                        if (!keepDays.includes(dateFolder)) {
-                            db.ref(`history/${dateFolder}`).remove();
-                        }
-                    });
-                }
-            });
-        } else {
-            console.log("Firebase già pulito da un altro terminale.");
-        }
-    });
-}
-
-
-    // 核心同步逻辑：实时监听 A 端和 B 端传到 history 的完成/取消任务
-db.ref('history').on('child_added', (snapshot) => {
-    snapshot.forEach((child) => {
-        const item = child.val();
-        // 如果本地 Archivio 还没记录过这个开始时间的任务，就补齐它
-        if (item.status === 'completed' && !processedStarts.has(item.startA)) {
+    // 实时同步逻辑：解决取消任务卡片消失问题
+    db.ref('history/' + new Date().toISOString().split('T')[0]).on('child_added', (snapshot) => {
+        const item = snapshot.val();
+        if (item && item.status === 'completed' && !processedStarts.has(item.startA)) {
             const entry = {
-                i: item.id || child.key.split('_')[0],
+                i: item.id || snapshot.key.split('_')[0],
                 day: new Date(item.startA).toLocaleDateString('it-IT'),
                 s: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
                 tA: Math.round(((item.startD || item.startA) - item.startA) / 60000),
@@ -227,13 +212,11 @@ db.ref('history').on('child_added', (snapshot) => {
             logs.push(entry);
             processedStarts.add(item.startA);
             if (!dayHistory.includes(entry.day)) dayHistory.push(entry.day);
+            saveState();
+            renderCombinedCards();
+            if(document.getElementById('historyPage').style.display === 'flex') renderLogs();
         }
     });
-    saveState();
-    renderCombinedCards(); // 立即刷新主页
-    if(document.getElementById('historyPage').style.display === 'flex') renderLogs(); // 如果开着历史页也刷新
-});
-
 
     function autoCleanOldRecords() {
         const thirtyDaysAgo = new Date();
@@ -352,7 +335,7 @@ db.ref('history').on('child_added', (snapshot) => {
             return tDay === todayStr && tTurno === currentTurno && !item.hideFromBoard;
         }).map(id => {
             const item = cloudData[id];
-            return { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+            return { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.status === 'red' || item.status === 'finishing' ? (item.startB || item.startA) : item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
         });
 
         const all = [...localToDisplay, ...cloudItems].sort((a, b) => {
@@ -394,7 +377,6 @@ db.ref('history').on('child_added', (snapshot) => {
             const todayStr = new Date().toLocaleDateString('it-IT');
             const hasObsolete = logs.some(l => (l.day !== todayStr || l.t !== currentTurno) && !l.hideFromBoard);
             if(hasObsolete) {
-                console.log("Cambio turno rilevato al risveglio. Refresh...");
                 window.location.reload(true);
             }
         }
@@ -455,14 +437,15 @@ db.ref('history').on('child_added', (snapshot) => {
     function toggleDay(header) { const content = header.nextElementSibling; const arrow = header.querySelector('.arrow-icon'); const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; arrow.innerText = isHidden ? '▼' : '▶'; }
     function deleteDay(e, day) { e.stopPropagation(); if(!confirm("Cancellare i dati del " + day + "?")) return; logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; }); dayHistory = dayHistory.filter(d => d !== day); saveState(); renderLogs(); renderCombinedCards(); }
     function clearAll() { if(!confirm("Cancellare tutti i dati dell'archivio?")) return; logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs(); renderCombinedCards(); }
-    window.onload = () => {
-    // 你的其他初始化代码...
     
-    // 执行带锁的清理逻辑
-    cleanCloudHistory(); 
-};
+    // 初始化执行
+    window.onload = () => {
+        document.getElementById('curYear').innerText = new Date().getFullYear();
+        updateHeaderTurno();
+        cleanCloudHistory(); 
+        renderCombinedCards();
+    };
 
-    document.getElementById('curYear').innerText = new Date().getFullYear();
     setInterval(() => { if (typeof renderCombinedCards === "function") { renderCombinedCards(); } }, 30000); 
 </script>
 </body>
