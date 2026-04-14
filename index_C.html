@@ -160,7 +160,7 @@
 
     <div id="feedbackPage">
         <div class="v-nav">
-            <div style="font-size:28px; cursor:pointer" onclick="closeFeedback()">←</div>
+            <div style="font-size:28px; cursor:pointer" onclick="closeHistory()">←</div>
             <h2 style="font-size:15px; font-weight:700; margin:0;">CRESCITA TECNICA</h2>
             <div style="width:28px"></div>
         </div>
@@ -186,6 +186,16 @@
     let feedbackLogs = JSON.parse(localStorage.getItem('c_feedback_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
+
+    /* 修复主页按钮功能定义开始 */
+    function showHistory() { document.getElementById('historyPage').style.display = 'flex'; renderLogs(); }
+    function closeHistory() { 
+        document.getElementById('historyPage').style.display = 'none'; 
+        document.getElementById('feedbackPage').style.display = 'none'; 
+    }
+    function showFeedback() { document.getElementById('feedbackPage').style.display = 'flex'; renderFeedback(); }
+    function closeFeedback() { document.getElementById('feedbackPage').style.display = 'none'; }
+    /* 修复主页按钮功能定义结束 */
 
     function cleanCloudHistory() {
         const todayStr = new Date().toISOString().split('T')[0];
@@ -358,7 +368,6 @@
         });
 
         const all = Array.from(uniqueItemsMap.values()).sort((a, b) => {
-            // 精准置底 ANNULLATO (两个L)
             const aAnn = String(a.causale).toUpperCase().includes("ANNULL"); 
             const bAnn = String(b.causale).toUpperCase().includes("ANNULL");
             if (aAnn && !bAnn) return 1; if (!aAnn && bAnn) return -1;
@@ -373,15 +382,12 @@
             const isAnnulato = String(item.causale).toUpperCase().includes("ANNULL");
             let waitMin = item.isLocal ? item.tA : Math.round((now-item.startA)/60000);
             let workMin = item.isLocal ? item.tD : (item.startB ? Math.round((now-item.startB)/60000) : 0);
-            
-            // 修改点 2: 将这里的状态变量统一为 annullato (两个L)
             let statusL, colorC, statusK;
             if(item.status === 'orange') { statusL = 'ATTESA'; colorC = 'orange'; statusK = 'waiting'; }
             else if(item.status === 'red' || item.status === 'finishing') { statusL = 'LAVORO'; colorC = 'red'; statusK = 'working'; }
             else { statusL = 'FINE'; colorC = 'black'; statusK = 'completed'; }
             
             const card = document.createElement('div');
-            // 修改点 3: 这里也统一为 annullato
             card.className = `card st-${isAnnulato ? 'annullato' : statusK}`;
             if(!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
             
