@@ -306,11 +306,31 @@
     }
 
     function cancelCall() {
-        const id = localStorage.getItem('myActiveCall');
-        if (!id || !confirm("Annullare la chiamata for linea " + id.toUpperCase() + "?")) return;
-        db.ref('active_calls/' + id).update({ status: 'completed', endT: Date.now(), causale: "ANNULATO DA OPERATORE" })
-        .then(() => { localStorage.removeItem('myActiveCall'); resetUI(); });
-    }
+    const id = localStorage.getItem('myActiveCall');
+    if (!id || !confirm("Annullare la chiamata for linea " + id.toUpperCase() + "?")) return;
+
+    const now = Date.now();
+    const dateKey = new Date().toISOString().split('T')[0];
+
+    // 新增：先获取数据并存入历史路径
+    db.ref('active_calls/' + id).once('value').then(snap => {
+        const data = snap.val();
+        if (data) {
+            db.ref(`history/${dateKey}/${id}_${now}`).set({
+                ...data,
+                status: 'completed',
+                endT: now,
+                causale: "ANNULLATO DA OPERATORE"
+            });
+        }
+        // 原有逻辑：删除活跃任务
+        db.ref('active_calls/' + id).remove().then(() => { 
+            localStorage.removeItem('myActiveCall'); 
+            resetUI(); 
+        });
+    });
+}
+
 
     document.getElementById('curYear').innerText = new Date().getFullYear();
     const pLinea = localStorage.getItem('persistentLinea');
