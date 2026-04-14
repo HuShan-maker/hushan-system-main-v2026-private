@@ -19,7 +19,6 @@
             --btn-gray: #f2f2f7; 
             --locked-gray-red: #bb8888; 
             --green: #34c759;
-            --purple: #5856d6;
         }
         * { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         
@@ -52,65 +51,69 @@
         .p-badge { position: absolute; top: -5px; right: -5px; background: var(--red); width: 13px; height: 13px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; animation: badgePulse 1.5s infinite; border: 2px solid white; }
         @keyframes badgePulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        /* 网格布局 */
+        /* 网格动画 */
         #g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
         .slide-left { transform: translateX(-30px); opacity: 0; }
         .slide-right { transform: translateX(30px); opacity: 0; }
         
         .btn-wrap { position: relative; width: 100%; aspect-ratio: 1/1; }
-        .btn-machine { width: 100%; height: 100%; border: none; border-radius: 24px; font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: all 0.3s; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-machine { width: 100%; height: 100%; border: none; border-radius: 24px; font-weight: 800; font-size: 17px; background: var(--btn-gray); transition: all 0.3s; }
         .badge { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; background: #000; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         .or { background: var(--red) !important; color: #fff !important; animation: pulseRed 1.5s infinite; box-shadow: 0 0 15px rgba(255,59,48,0.4) !important; }
         .locked-btn { background: var(--locked-gray-red) !important; color: rgba(255, 255, 255, 0.8) !important; opacity: 0.8; pointer-events: none; }
         .waiting { background: var(--orange) !important; color: #fff !important; animation: pulseOrange 1.5s infinite; box-shadow: 0 0 15px rgba(255,149,0,0.3) !important; }
-        
-        /* 紫色换单卡片 */
-        .cambio { background: var(--purple) !important; color: #fff !important; box-shadow: 0 0 15px rgba(88, 86, 214, 0.4) !important; }
-        .modello-tag { font-size: 9px; opacity: 0.9; margin-top: 2px; background: rgba(255,255,255,0.2); padding: 1px 4px; border-radius: 4px; font-weight: 700; max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         @keyframes pulseRed { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } }
         @keyframes pulseOrange { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.96); opacity: 0.7; } }
 
-        /* 底部大按钮区域 */
-        .bottom-area { 
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 12px; 
-            margin-top: 20px; 
-            padding-bottom: 30px; 
-        }
-        .info-search-btn, .fuori-btn { 
-            grid-column: span 2; 
-            width: 100%; 
-            aspect-ratio: 2/0.95; /* 调整比例使其高度与上方16格对齐 */
-            border: none; border-radius: 24px; 
-            background: var(--btn-gray); font-weight: 800; 
-            text-transform: uppercase; transition: 0.3s; 
-            display: flex; align-items: center; justify-content: center;
-        }
-        .info-search-btn { font-size: 16px; }
-        .fuori-btn { font-size: 13px; }
+        .bottom-area { display: flex; justify-content: center; margin-top: 20px; padding-bottom: 30px; }
+        .fuori-btn { background: var(--btn-gray); border: none; border-radius: 18px; font-size: 14px; font-weight: 800; height: 65px; width: calc(50% + 6px); text-transform: uppercase; transition: 0.3s; position: relative; }
         
         .color-picker-wrap { position: fixed; right: 20px; bottom: 40px; z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
         .v-nav { display: flex; align-items: center; height: 60px; padding: 0 10px; background: #fff; border-bottom: 1px solid #f2f2f7; flex-shrink: 0; position: relative; }
+        .v-nav-left { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; }
+        .v-nav-center { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .v-nav-right { width: 60px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
         .back-arrow { font-size: 30px; cursor: pointer; padding: 10px; line-height: 1; }
         .v-h2 { font-size: 13px; font-weight: 900; text-transform: uppercase; margin: 0; text-align: center; white-space: nowrap; letter-spacing: -0.2px; }
+        .v-user-tag { font-size: 11px; color: #8e8e93; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
         
-        /* 大弹窗样式 */
-        #techModal .modal-content { width: 92%; max-width: 450px; padding: 30px 20px; border-radius: 35px; text-align: left; position: relative; }
-        .tech-title { font-size: 20px; font-weight: 900; color: var(--purple); text-align: center; margin-bottom: 5px; text-transform: uppercase; }
-        .eye-count { font-size: 10px; color: var(--red); font-weight: 800; text-align: center; display: block; margin-bottom: 20px; text-transform: uppercase; }
-        .tech-row { margin-bottom: 15px; border-bottom: 1px solid #f2f2f7; padding-bottom: 8px; }
-        .tech-label { font-size: 10px; font-weight: 800; color: #8e8e93; text-transform: uppercase; }
-        .tech-value { font-size: 16px; font-weight: 700; color: #000; margin-top: 2px; }
+        #logContainer { flex: 1; overflow-y: auto; padding: 3px 15px 15px 15px; -webkit-overflow-scrolling: touch; }
+        .day-header { background: var(--btn-gray); padding: 14px 15px; font-size: 14px; font-weight: 800; color: #000; display: flex; align-items: center; position: sticky; top: 0; z-index: 150; border-radius: 12px; margin-bottom: 15px; min-height: 48px; }
+        .day-del-btn { color: var(--red); font-weight: 900; font-size: 20px; margin-right: 12px; width: 20px; display: none; align-items: center; justify-content: center; line-height: 1; cursor: pointer; }
+        .day-section.collapsed .day-del-btn { display: flex; }
+        .day-header-left { display: flex; align-items: center; flex: 1; }
+        .day-header::after { content: '▼'; font-size: 10px; color: #8e8e93; margin-left: auto; }
+        .day-section.collapsed .day-header::after { content: '▶'; }
+        .day-section.collapsed .day-content { display: none; }
 
-        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal, #techModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; } 
+        th, td { padding: 12px 2px; text-align: center; font-size: 14px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
+        th { color: #8e8e93; font-size: 9px; text-transform: uppercase; background: #fff; position: sticky; top: 48px; z-index: 140; }
+        .col-time { text-align: left !important; padding-left: 8px !important; width: 85px; }
+        .time-cell { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; line-height: 1.1; font-size: 13.5px; font-weight: 800; }
+        .t-a { color: var(--orange); }
+        .t-d { color: var(--red); }
+        
+        .v-footer { flex-shrink: 0; background: #fff; padding: 15px; border-top: 1px solid #f2f2f7; z-index: 250; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; }
+        .bottom-action-btn { border: none; padding: 10px 0; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; flex: 1; max-width: 140px; cursor: pointer; }
+        .export-btn { background: #000; color: #fff; }
+        .clear-btn { background: var(--btn-gray); color: var(--red); border: 1px solid #ddd; }
+        .copy-text { text-align: center; font-size: 11px; color: #000000; margin-top: 5px; font-weight: 800; text-transform: uppercase; }
+
+        .undo-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--btn-gray); border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .del-row { color: var(--red); font-weight: 900; font-size: 20px; text-align: center; cursor: pointer; }
+        .editable-causale { color: #000; display: block; padding: 8px 0; word-wrap: break-word; font-size: 12px; }
+
+        #confirmModal, #editModal, #nameModal, #dayConfirmModal, #fuoriModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-content { background: #fff; width: 85%; padding: 25px; border-radius: 30px; text-align: center; }
         .modal-btn { background: #000; color: #fff; padding: 15px; border-radius: 15px; font-weight: 700; width: 100%; font-size: 16px; border: none; margin-top: 10px; }
+        .modal-input { width: 100%; padding: 15px; text-align: center; border-radius: 12px; border: 1px solid #ddd; outline: none; font-size: 16px; margin-bottom: 10px; }
     </style>
 </head>
 <body class="p1">
@@ -133,23 +136,10 @@
 
     <div id="dynamicContent">
         <div id="g"></div>
-        <div class="bottom-area">
-            <button class="info-search-btn" id="btn-info" onclick="openQuickSearch()">INFO</button>
-            <button id="btn-fuori" class="fuori-btn" onclick="toggleFuori()">FUORI LINEA</button>
-        </div>
+        <div class="bottom-area"><button id="btn-fuori" class="fuori-btn" onclick="toggleFuori()">FUORI LINEA</button></div>
     </div>
 
     <div class="color-picker-wrap" id="pickerContainer"><input type="color" id="floorColor" onchange="updateThemeColor(this.value)"></div>
-
-    <div id="techModal">
-        <div class="modal-content">
-            <div class="tech-title" id="techTitle">SCHEDA TECNICA</div>
-            <span class="eye-count" id="observerCount">OCCHI SUL MODELLO: 0</span>
-            <div id="techBody"></div>
-            <button class="modal-btn" id="takeJobBtn" style="background:var(--purple)">PRENDI IN CARICO</button>
-            <button class="modal-btn" style="background:var(--btn-gray); color:#000; margin-top:10px;" id="closeTechBtn">CHIUDI</button>
-        </div>
-    </div>
 
     <div id="nameModal"><div class="modal-content"><h3>Cambia Nome</h3><input type="text" id="nameInput" class="modal-input" autocomplete="off"><button class="modal-btn" onclick="saveName()">SALVA</button></div></div>
     <div id="fuoriModal"><div class="modal-content"><h3>Causale Fuori Linea</h3><input type="text" id="fuoriCausaleInput" class="modal-input" placeholder="Attività svolta..."><button class="modal-btn" onclick="saveFuoriCausale()">SALVA</button></div></div>
@@ -185,14 +175,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // --- 核心安全变量 ---
     let serverTimeOffset = 0;
-    let isPermanentlyLocked = false; 
+    let isPermanentlyLocked = false; // 永久锁死开关
 
     db.ref(".info/serverTimeOffset").on("value", (snap) => {
         serverTimeOffset = snap.val() || 0;
-        checkSecurity(); 
+        checkSecurity(); // 每次同步后校验安全
     });
 
+    // --- 2. 班次逻辑 (基于服务器时间) ---
     function getRealTimeTurno() {
         const now = new Date(Date.now() + serverTimeOffset);
         const hour = now.getHours() + (now.getMinutes() / 60);
@@ -204,9 +196,11 @@
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
+    // 安全检查：如果检测到篡改，立即永久锁死
     function checkSecurity() {
         if (isPermanentlyLocked) return;
         const currentTurno = getRealTimeTurno();
+        // 判定：如果计算出的班次与设置的班次不符，视为异常环境（锁死）
         if (myShift !== currentTurno) {
             isPermanentlyLocked = true;
             renderGrid();
@@ -250,11 +244,28 @@
     let logs = JSON.parse(localStorage.getItem('logs_v7') || '[]');
     let dayHistory = JSON.parse(localStorage.getItem('dayHistory_v7') || '[]');
     let undoStack = [], curPiano = 1, editIndex = -1, clickCount = 0, clickTimer = null, nameClickCount = 0, nameClickTimer = null, touchStartX = 0;
+    let isInitialLoad = true; 
 
-    function saveState() { 
-        localStorage.setItem('logs_v7', JSON.stringify(logs)); 
-        localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
+    function autoCleanOldRecords() {
+        const now = new Date(Date.now() + serverTimeOffset);
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+        let needsSave = false;
+        const updatedDayHistory = dayHistory.filter(dayStr => {
+            const [d, m, y] = dayStr.split('/');
+            const recordDate = new Date(y, m - 1, d);
+            if (recordDate < thirtyDaysAgo) { needsSave = true; return false; }
+            return true;
+        });
+        const updatedLogs = logs.filter(l => {
+            const [d, m, y] = l.day.split('/');
+            const recordDate = new Date(y, m - 1, d);
+            if (recordDate < thirtyDaysAgo) { needsSave = true; return false; }
+            return true;
+        });
+        if (needsSave) { logs = updatedLogs; dayHistory = updatedDayHistory; saveState(); }
     }
+    autoCleanOldRecords();
 
     db.ref('active_calls').on('value', (snapshot) => {
         act = snapshot.val() || {};
@@ -263,111 +274,74 @@
         applyTheme();
     });
 
-    // 换单技术详情+多人观察逻辑
-    function openTechModal(lineId, modello) {
-        if (!modello) return;
-        const observerRef = db.ref(`maintenance/observers/${modello}/${myDeviceId}`);
-        const allObserversRef = db.ref(`maintenance/observers/${modello}`);
-        
-        observerRef.set(true);
-        observerRef.onDisconnect().remove();
-
-        allObserversRef.on('value', snap => {
-            const count = snap.numChildren();
-            document.getElementById('observerCount').innerText = `OCCHI SUL MODELLO: ${count}`;
-        });
-
-        db.ref('model_db/' + modello).once('value').then(snap => {
-            const info = snap.val();
-            const body = document.getElementById('techBody');
-            const btn = document.getElementById('takeJobBtn');
-            const closeBtn = document.getElementById('closeTechBtn');
-            const modal = document.getElementById('techModal');
-            
-            document.getElementById('techTitle').innerText = modello;
-            
-            if (info) {
-                body.innerHTML = `
-                    <div class="tech-row"><div class="tech-label">Programma</div><div class="tech-value">${info.programma || '-'}</div></div>
-                    <div class="tech-row"><div class="tech-label">Posaggi</div><div class="tech-value">${info.posaggio || '-'}</div></div>
-                    <div class="tech-row"><div class="tech-label">Utensili</div><div class="tech-value">${info.tools || '-'}</div></div>
-                    <div class="tech-row"><div class="tech-label">Note</div><div class="tech-value" style="color:var(--red)">${info.note || '-'}</div></div>
-                `;
-            } else {
-                body.innerHTML = `<div style="padding:20px; color:#8e8e93; text-align:center;">Dati non trovati.</div>`;
-            }
-
-            if (lineId && act[lineId] && act[lineId].status === 'orange') {
-                btn.style.display = 'block';
-                btn.onclick = () => {
-                    const sTime = firebase.database.ServerValue.TIMESTAMP;
-                    db.ref('active_calls/' + lineId).update({ 
-                        status: 'red', startD: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName 
-                    }).then(() => {
-                        observerRef.remove();
-                        allObserversRef.off();
-                        modal.style.display = 'none';
-                    });
-                };
-            } else { btn.style.display = 'none'; }
-
-            closeBtn.onclick = () => { observerRef.remove(); allObserversRef.off(); modal.style.display = 'none'; };
-            modal.style.display = 'flex';
-        });
+    function saveState() { 
+        localStorage.setItem('logs_v7', JSON.stringify(logs)); 
+        localStorage.setItem('dayHistory_v7', JSON.stringify(dayHistory)); 
     }
 
     function handleMachineClick(id) {
-        if (isPermanentlyLocked) return; 
+        if (isPermanentlyLocked) return; // 永久锁死拦截
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         if (!act[id]) return; 
-        const task = act[id];
-        if (task.causale === 'Cambio' && task.status === 'orange') {
-            openTechModal(id, task.modello);
-            return;
-        }
-        if (task.status === 'orange') {
-            db.ref('active_calls/' + id).update({ status: 'red', startD: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName });
+        if (act[id].status === 'orange') {
+            db.ref('active_calls/' + id).update({ 
+                status: 'red', startD: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName 
+            });
         } 
-        else if (task.status === 'red' && task.takenBy === myDeviceId) {
+        else if (act[id].status === 'red' && act[id].takenBy === myDeviceId) {
+            const item = act[id];
             const now = Date.now() + serverTimeOffset;
-            archiveIntervention(id, task.causale || "-", task.startA, task.startD || task.startA, now, currentUserName);
+            archiveIntervention(id, item.causale || "-", item.startA, item.startD || item.startA, now, currentUserName);
             if (id === 'FUORI') { db.ref('active_calls/FUORI').remove(); }
             else { db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime }); }
         }
     }
 
-    function openQuickSearch() {
-        let foundModello = "";
-        Object.values(act).forEach(t => { if(t.modello && t.causale === 'Cambio') foundModello = t.modello; });
-        let search = prompt("Cerca info modello:", foundModello);
-        if (search) openTechModal(null, search.toUpperCase().trim());
-    }
-
     function archiveIntervention(id, causale, startA, startD, endT, tech) {
-        const nowServer = new Date(endT);
-        const dateKey = nowServer.toISOString().split('T')[0];
-        const newLog = { 
-            i: id, day: nowServer.toLocaleDateString('it-IT'), 
-            s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-            tA: Math.round((startD - startA) / 60000), tD: Math.round((endT - startD) / 60000), st: startA, c: causale, tech: tech
-        };
-        logs.push(newLog);
-        if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
-        saveState();
-        if (id !== 'FUORI') {
-            db.ref(`history/${dateKey}/${id}_${endT}`).set({ id, startA, startD, endT, causale, techName: tech, status: 'completed', turno: getRealTimeTurno(), modello: act[id]?.modello || "" });
-        }
+    const nowServer = new Date(endT);
+    const dateKey = nowServer.toISOString().split('T')[0]; // 格式如 2026-04-14
+    
+    const newLog = { 
+        i: id, day: nowServer.toLocaleDateString('it-IT'), 
+        s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+        tA: Math.round((startD - startA) / 60000), 
+        tD: Math.round((endT - startD) / 60000), 
+        st: startA, c: causale, tech: tech
+    };
+    
+    // 原有逻辑：存本地
+    logs.push(newLog);
+    if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+    saveState();
+
+    // 新增逻辑：同步到 C 端（如果是 FUORI LINEA 则不发云端）
+    if (id !== 'FUORI') {
+        db.ref(`history/${dateKey}/${id}_${endT}`).set({
+            id: id,
+            startA: startA,
+            startD: startD,
+            endT: endT,
+            causale: causale,
+            techName: tech,
+            status: 'completed',
+            turno: getRealTimeTurno() 
+        });
     }
+}
+
 
     function toggleFuori() {
-        if (isPermanentlyLocked) return;
+        if (isPermanentlyLocked) return; // 永久锁死拦截
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         const fs = act['FUORI'];
         if(fs && fs.status === 'red' && fs.takenBy === myDeviceId) {
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
-            db.ref('active_calls/FUORI').set({ status: 'red', startA: sTime, startB: sTime, startD: sTime, takenBy: myDeviceId, techName: currentUserName, turno: getRealTimeTurno() });
+            db.ref('active_calls/FUORI').set({ 
+                status: 'red', startA: sTime, startB: sTime, startD: sTime, takenBy: myDeviceId, techName: currentUserName,
+                turno: getRealTimeTurno() 
+            });
         }
     }
 
@@ -386,37 +360,50 @@
         const gd = document.getElementById('g'); gd.innerHTML = '';
         const turnoLabel = document.getElementById('turnoDisp');
         const contentArea = document.getElementById('dynamicContent');
+        
+        // 判定：只要被永久锁死，或者物理班次不对，界面全部灰显
         const isWorkingTime = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
+        
         turnoLabel.innerText = myShift;
-        if (isWorkingTime) { contentArea.classList.remove('shift-lock-ui'); turnoLabel.classList.add('turno-on'); } 
-        else { contentArea.classList.add('shift-lock-ui'); turnoLabel.classList.remove('turno-on'); }
+        if (isWorkingTime) { 
+            contentArea.classList.remove('shift-lock-ui'); 
+            turnoLabel.classList.add('turno-on'); 
+        } else { 
+            contentArea.classList.add('shift-lock-ui'); 
+            turnoLabel.classList.remove('turno-on'); 
+        }
+
         const allOrangeIds = Object.keys(act).filter(key => key !== 'FUORI' && act[key].status === 'orange').sort((a, b) => act[a].startA - act[b].startA);
         const c = themeConfig[curPiano];
+        
         pianoData[curPiano].forEach(i => {
             const wrap = document.createElement('div'); wrap.className = 'btn-wrap';
             const b = document.createElement('button'); 
             const s = isWorkingTime ? act[i] : null; 
+            
             b.className = 'btn-machine'; b.innerText = i;
             if (s && (s.status === 'orange' || s.status === 'red')) {
-                if (s.status === 'orange') { 
-                    if (s.causale === 'Cambio') { b.classList.add('cambio'); b.innerHTML = `<span>${i}</span><span class="modello-tag">${s.modello || ''}</span>`; } 
-                    else { b.classList.add('waiting'); }
-                    b.style.color = "#ffffff"; 
-                } else { 
-                    if (s.takenBy === myDeviceId) { b.classList.add('or'); if (s.causale === 'Cambio') { b.innerHTML = `<span>${i}</span><span class="modello-tag">${s.modello || ''}</span>`; } } 
-                    else { b.classList.add('locked-btn'); }
-                    b.style.color = "#ffffff"; 
-                }
-            } else { b.style.color = c; b.style.backgroundColor = 'var(--btn-gray)'; }
+                if (s.status === 'orange') { b.classList.add('waiting'); b.style.color = "#ffffff"; } 
+                else { if (s.takenBy === myDeviceId) { b.classList.add('or'); b.style.color = "#ffffff"; } else { b.classList.add('locked-btn'); } }
+            } else { 
+                b.style.color = c; 
+                b.style.backgroundColor = 'var(--btn-gray)'; 
+            }
+            
             b.onclick = () => isWorkingTime && handleMachineClick(i); 
             wrap.appendChild(b);
+            
             if (isWorkingTime && s && s.status === 'orange') {
-                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = allOrangeIds.indexOf(i) + 1; wrap.appendChild(badge);
+                const qNum = allOrangeIds.indexOf(i) + 1;
+                const badge = document.createElement('div'); badge.className = 'badge'; badge.innerText = qNum; wrap.appendChild(badge);
             }
             gd.appendChild(wrap);
         });
-        document.getElementById('btn-fuori').style.color = (act['FUORI'] && act['FUORI'].status === 'red') ? '#fff' : c;
-        document.getElementById('btn-info').style.color = c;
+        
+        const f = document.getElementById('btn-fuori');
+        const fs = isWorkingTime ? act['FUORI'] : null;
+        f.className = (fs && fs.status === 'red') ? 'fuori-btn or' : 'fuori-btn';
+        if (!(fs && fs.status === 'red')) f.style.color = c;
     }
 
     function updateGlobalBadges() {
@@ -458,19 +445,42 @@
 
     function renderLogs() {
         const container = document.getElementById('logContainer');
+        const expandedDays = new Set();
+        container.querySelectorAll('.day-section:not(.collapsed) span').forEach(el => expandedDays.add(el.innerText.trim()));
         container.innerHTML = '';
         const oggi = new Date(Date.now() + serverTimeOffset).toLocaleDateString('it-IT');
         const groups = {}; dayHistory.forEach(d => groups[d] = []);
         logs.forEach((l, idx) => { if (groups[l.day]) groups[l.day].push({ ...l, originalIndex: idx }); });
         Object.keys(groups).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const section = document.createElement('div');
-            section.className = 'day-section';
+            const isCollapsed = expandedDays.size === 0 ? (day !== oggi) : !expandedDays.has(day);
+            section.className = 'day-section' + (isCollapsed ? ' collapsed' : '');
             const dayLogs = groups[day].sort((a, b) => b.st - a.st);
-            section.innerHTML = `<div class="day-header"><span>${day}</span></div><div class="day-content"><table><tbody>${dayLogs.map(l => `<tr><td><b>${l.i}</b></td><td>${l.s}</td><td>${l.c}</td></tr>`).join('')}</tbody></table></div>`;
+            section.innerHTML = `
+                <div class="day-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="day-header-left"><div class="day-del-btn" onclick="openDayDelConfirm(event, '${day}')">×</div><span>${day}</span></div>
+                </div>
+                <div class="day-content">
+                    <table>
+                        <thead><tr><th>LINEA</th><th>INIZIO</th><th class="col-time">A & D</th><th>CAUSALE</th><th><span class="undo-btn" onclick="performUndo(event)">↺</span></th></tr></thead>
+                        <tbody>${dayLogs.map(l => `<tr>
+                            <td><b>${l.i === 'FUORI' ? 'F. LINEA' : l.i}</b></td>
+                            <td>${l.s}</td>
+                            <td class="col-time"><div class="time-cell"><span class="t-a">A: ${l.tA}m</span><span class="t-d">D: ${l.tD}m</span></div></td>
+                            <td><span class="editable-causale" onclick="handleCausaleClick(${l.originalIndex})">${l.c}</span></td>
+                            <td class="del-row" onclick="deleteRow(${l.originalIndex})">×</td>
+                        </tr>`).join('')}</tbody>
+                    </table>
+                </div>`;
             container.appendChild(section);
         });
     }
 
+    function handleCausaleClick(index) { clickCount++; if(clickCount===1) clickTimer=setTimeout(()=>clickCount=0,350); else { clearTimeout(clickTimer); clickCount=0; editIndex = index; document.getElementById('editCausaleInput').value=logs[index].c; document.getElementById('editModal').style.display='flex'; setTimeout(()=>document.getElementById('editCausaleInput').focus(),150); } }
+    function confirmEdit() { logs[editIndex].c=document.getElementById('editCausaleInput').value.trim()||"-"; saveState(); document.getElementById('editModal').style.display='none'; renderLogs(); }
+    function performUndo(e) { e.stopPropagation(); if(undoStack.length){ let last=undoStack.pop(); logs=last.l; dayHistory=last.h; saveState(); renderLogs(); } }
+    function deleteRow(index) { undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs.splice(index,1); saveState(); renderLogs(); }
+    function openDayDelConfirm(e, day) { e.stopPropagation(); document.getElementById('dayConfirmModal').style.display='flex'; document.getElementById('confirmDayDelBtn').onclick=()=>{ undoStack.push({l:JSON.parse(JSON.stringify(logs)), h:[...dayHistory]}); logs=logs.filter(l=>l.day!==day); dayHistory=dayHistory.filter(d=>d!==day); saveState(); document.getElementById('dayConfirmModal').style.display='none'; renderLogs(); }; }
     function handleNameClick() { nameClickCount++; if(nameClickCount === 2) { document.getElementById('nameInput').value = currentUserName; document.getElementById('nameModal').style.display = 'flex'; setTimeout(() => document.getElementById('nameInput').focus(), 150); nameClickCount = 0; } else { setTimeout(() => { nameClickCount = 0; }, 350); } }
     function saveName() { let n=document.getElementById('nameInput').value.trim(); if(n){ currentUserName = n; localStorage.setItem('userName',n); document.getElementById('userNameDisp').innerText=n; document.getElementById('regNameDisp').innerText=n; } document.getElementById('nameModal').style.display='none'; }
     function showMemoria() { renderLogs(); document.getElementById('v').style.display='flex'; }
@@ -480,8 +490,13 @@
     
     async function shareRegistro() { 
         if (logs.length === 0) return; 
+        const expandedDays = Array.from(document.querySelectorAll('.day-section:not(.collapsed) span')).map(el => el.innerText); 
         let text = `REGISTRO - ${currentUserName}\n------------------\n`; 
-        logs.forEach(l => { text += `${l.i}: ${l.s} | ${l.c}\n`; }); 
+        const groups = {}; dayHistory.forEach(d => groups[d] = []); 
+        logs.forEach(l => { if (groups[l.day]) groups[l.day].push(l); }); 
+        Object.keys(groups).filter(day => expandedDays.includes(day)).sort((a,b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => { 
+            text += `\n[ ${day} ]\n`; groups[day].sort((a,b) => b.st - a.st).forEach(l => { text += `${l.i}: ${l.s} | A:${l.tA}m | D:${l.tD}m | ${l.c}\n`; }); 
+        }); 
         if (navigator.share) await navigator.share({ title: `Registro`, text: text }); 
     }
 
@@ -496,14 +511,19 @@
     document.getElementById('curYear').innerText = new Date(Date.now() + serverTimeOffset).getFullYear();
     applyTheme();
     
+    // --- 终极每10秒安全监控逻辑 ---
     setInterval(() => {
+        // 重新从服务器获取偏移量（质问服务器真时间）
         db.ref(".info/serverTimeOffset").once("value").then((snap) => {
             serverTimeOffset = snap.val() || 0;
-            checkSecurity(); 
+            checkSecurity(); // 执行安全检查
+            
+            // 常规重绘
             renderGrid();
             updateGlobalBadges();
+            console.log("System Check: Security Scan Completed.");
         });
-    }, 10000);
+    }, 10000); // 严格10秒间隔
 </script>
 </body>
 </html>
