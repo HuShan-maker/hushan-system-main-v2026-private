@@ -44,8 +44,9 @@
         .card.st-working { border-color: var(--red); }
         .card.st-completed { border-color: var(--black); }
         
-        /* 强制取消卡片背景为深灰色，且边框变淡 */
+        /* 强制覆盖：取消任务变深灰色背景，白色文字 */
         .card.st-annulato { min-height: 55px !important; background: #8e8e93 !important; border: 1px solid #c7c7cc !important; opacity: 1 !important; box-shadow: none !important; }
+        .card.st-annulato .card-linea, .card.st-annulato .card-center div { color: #ffffff !important; }
 
         .card-left { display: flex; flex-direction: column; gap: 6px; flex: 0.7; min-width: 80px; justify-content: center; align-items: flex-start; }
         .card-badge { font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; color: #fff; letter-spacing: 0.3px; white-space: nowrap; }
@@ -329,69 +330,73 @@
 
         const uniqueItemsMap = new Map();
 
-        const cloudItems = Object.keys(cloudData).filter(id => {
+        // 1. 处理云端数据
+        Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
             const tDay = new Date(item.startA).toLocaleDateString('it-IT');
             const tTurno = item.turno || calculateTurnoByTimestamp(item.startA);
-            return tDay === todayStr && tTurno === currentTurno && !item.hideFromBoard;
-        }).forEach(id => {
-            const item = cloudData[id];
-            uniqueItemsMap.set(item.startA, { 
-                id: id, ...item, isLocal: false, 
-                sortTime: (item.status === 'orange') ? item.startA : (item.status === 'red' || item.status === 'finishing' ? (item.startB || item.startA) : item.startA), 
-                startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
-            });
-        });
-
-        logs.filter(l => l.day === todayStr && l.t === currentTurno && !l.hideFromBoard).forEach(l => {
-            if (!uniqueItemsMap.has(l.st)) {
-                uniqueItemsMap.set(l.st, {
-                    id: l.i, status: 'completed', startA: l.st, endT: l.et, causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true, sortTime: l.et || l.st, startTimeStr: l.s
+            
+            if (tDay === todayStr && tTurno === currentTurno && !item.hideFromBoard) {
+                uniqueItemsMap.set(item.startA, { 
+                    id: id, ...item, isLocal: false, 
+                    sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA), 
+                    startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
                 });
             }
         });
 
+        // 2. 处理本地存档（防止重复）
+        logs.forEach(l => {
+            if (l.day === todayStr && l.t === currentTurno && !l.hideFromBoard) {
+                if (!uniqueItemsMap.has(l.st)) {
+                    uniqueItemsMap.set(l.st, {
+                        id: l.i, status: 'completed', startA: l.st, endT: l.et, 
+                        causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, 
+                        isLocal: true, sortTime: l.et || l.st, startTimeStr: l.s
+                    });
+                }
+            }
+        });
+
+        // 3. 排序：ANNULLATO 强制到底部，超时强制到顶部
         const all = Array.from(uniqueItemsMap.values()).sort((a, b) => {
-            // 精准判定：只要包含 "ANNULATO" 无论大小写，权重设为 999 强制置底
-            const aIsAnn = String(a.causale).toUpperCase().includes("ANNULATO"); 
-            const bIsAnn = String(b.causale).toUpperCase().includes("ANNULATO");
+            // 模糊匹配 ANNULL：涵盖 ANNULLATO, ANNULLATA 等
+            const aIsAnn = String(a.causale).toUpperCase().includes("ANNULL"); 
+            const bIsAnn = String(b.causale).toUpperCase().includes("ANNULL");
             
             if (aIsAnn && !bIsAnn) return 1; 
             if (!aIsAnn && bIsAnn) return -1;
             
-            // 正常的超时优先逻辑
-            const bTo = (!b.isLocal && b.status === 'orange' && Math.round((Date.now() - b.startA) / 60000) >= 15);
-            const aTo = (!a.isLocal && a.status === 'orange' && Math.round((Date.now() - a.startA) / 60000) >= 15);
+            const bTo = (!b.isLocal && b.status === 'orange' && Math.round((now - b.startA) / 60000) >= 15);
+            const aTo = (!a.isLocal && a.status === 'orange' && Math.round((now - a.startA) / 60000) >= 15);
             if (aTo && !bTo) return -1; if (!aTo && bTo) return 1;
             
             return b.sortTime - a.sortTime;
         });
 
         all.forEach(item => {
-            const isAnnulato = String(item.causale).toUpperCase().includes("ANNULATO");
-            let waitMin = item.isLocal ? item.tA : Math.round((now-item.startA)/60000);
-            let workMin = item.isLocal ? item.tD : (item.startB ? Math.round((now-item.startB)/60000) : 0);
-            let statusL, colorC, statusK;
+            const isAnnulato = String(item.causale).toUpperCase().includes("ANNULL");
+            let waitMin = item.isLocal ? item.tA : Math.round((now - item.startA) / 60000);
+            let workMin = item.isLocal ? item.tD : (item.startB ? Math.round((now - item.startB) / 60000) : 0);
             
-            if(item.status === 'orange') { statusL = 'ATTESA'; colorC = 'orange'; statusK = 'waiting'; }
-            else if(item.status === 'red' || item.status === 'finishing') { statusL = 'LAVORO'; colorC = 'red'; statusK = 'working'; }
+            let statusL, colorC, statusK;
+            if (item.status === 'orange') { statusL = 'ATTESA'; colorC = 'orange'; statusK = 'waiting'; }
+            else if (item.status === 'red' || item.status === 'finishing') { statusL = 'LAVORO'; colorC = 'red'; statusK = 'working'; }
             else { statusL = 'FINE'; colorC = 'black'; statusK = 'completed'; }
 
             const card = document.createElement('div');
-            // 如果是取消，强制加上 st-annulato 类
             card.className = `card st-${isAnnulato ? 'annulato' : statusK}`;
-
-            if(!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
+            
+            if (!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
             
             if (isAnnulato) {
-                // 取消卡片的具体内容
                 card.innerHTML = `
-                    <div class="card-left"><div class="card-linea" style="font-size: 18px; color: #fff;">${item.id}</div></div>
+                    <div class="card-left"><div class="card-linea">${item.id}</div></div>
                     <div class="card-center" style="border:none; text-align: center;">
-                        <div style="font-size: 11px; font-weight: 800; color: #fff; letter-spacing:0.5px;">ANNULLATO DA OPERATORE</div>
+                        <div style="font-size: 11px; font-weight: 800; letter-spacing:0.5px;">ANNULLATO DA OPERATORE</div>
                     </div>
                     <div class="card-right" style="min-width: 50px;">
-                        <div style="font-size: 10px; color: #eee; font-weight:700;">${item.startTimeStr}</div>
+                        <div style="font-size: 10px; font-weight:700;">${item.startTimeStr}</div>
                     </div>`;
             } else {
                 card.innerHTML = `<div class="card-left"><div class="card-badge bg-${colorC}">${statusL}</div><div class="card-linea" style="margin-bottom: 20px;">${item.id}</div></div>
@@ -441,8 +446,8 @@
         const todayStr = new Date().toLocaleDateString('it-IT');
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
             const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
-            const countA = dayLogs.filter(l => l.t === "Turno A" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("CHIUSURA")).length;
-            const countB = dayLogs.filter(l => l.t === "Turno B" && !String(l.c).includes("ANNULATO") && !String(l.c).includes("CHIUSURA")).length;
+            const countA = dayLogs.filter(l => l.t === "Turno A" && !String(l.c).includes("ANNULL") && !String(l.c).includes("CHIUSURA")).length;
+            const countB = dayLogs.filter(l => l.t === "Turno B" && !String(l.c).includes("ANNULL") && !String(l.c).includes("CHIUSURA")).length;
             const isToday = (day === todayStr);
             const section = document.createElement('div');
             section.innerHTML = `
@@ -454,7 +459,7 @@
                     <table>
                         <thead><tr><th style="width:18%">LINEA</th><th style="width:13%">ATTESA</th><th style="width:13%">DURATA</th><th style="width:36%">CAUSALE</th><th style="width:20%">NOME</th></tr></thead>
                         <tbody>${dayLogs.map(l => {
-                            const isAnn = String(l.c).includes("ANNULATO");
+                            const isAnn = String(l.c).toUpperCase().includes("ANNULL");
                             return `<tr><td><b>${l.i}</b></td><td>${isAnn ? '-' : l.tA+'m'}</td><td>${isAnn ? '-' : l.tD+'m'}</td>
                             <td style="font-size:9px">${l.c}<br><span style="color:#8e8e93; font-size:8px;">[${l.t || calculateTurnoByTimestamp(l.st)}]</span></td>
                             <td class="tech-cell">${l.tech || '-'}</td></tr>`
