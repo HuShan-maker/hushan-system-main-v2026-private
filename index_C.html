@@ -200,12 +200,15 @@
         const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         const keepDays = [todayStr, yesterdayStr];
         const lockRef = db.ref('maintenance/lastCleanDate');
-
+    
         lockRef.transaction((currentValue) => {
             if (currentValue === todayStr) return; 
             return todayStr;
         }, (error, committed) => {
             if (committed) {
+                console.log("Primo avvio rilevato. Pulizia Firebase in corso...");
+    
+                // 1. 清理云端 2 天前的历史记录 (history)
                 db.ref('history').once('value').then(snap => {
                     const allHistory = snap.val();
                     if (allHistory) {
@@ -216,10 +219,24 @@
                         });
                     }
                 });
+    
+                // 2. 清理云端 2 天前的反馈记录 (feedbacks)
+                db.ref('feedbacks').once('value').then(fbSnap => {
+                    const allFb = fbSnap.val();
+                    if (allFb) {
+                        Object.keys(allFb).forEach(key => {
+                            const fbDateStr = allFb[key].data; 
+                            if (fbDateStr !== todayStr && fbDateStr !== yesterdayStr) {
+                                db.ref(`feedbacks/${key}`).remove();
+                            }
+                        });
+                    }
+                });
             }
         });
     }
-
+    
+    // 实时同步：获取当天已完成的任务并存入本地 Archivio
     db.ref('history/' + new Date().toISOString().split('T')[0]).on('child_added', (snapshot) => {
         const item = snapshot.val();
         if (item && item.status === 'completed' && !processedStarts.has(item.startA)) {
@@ -229,7 +246,8 @@
                 s: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
                 tA: Math.round(((item.startD || item.startA) - item.startA) / 60000),
                 tD: Math.round(((item.endT || Date.now()) - (item.startD || item.startA)) / 60000),
-                st: item.startA, et: item.endT || Date.now(),
+                st: item.startA, 
+                et: item.endT || Date.now(),
                 c: item.causale || "-",
                 tech: item.techName || "-",
                 t: item.turno || calculateTurnoByTimestamp(item.startA)
@@ -242,6 +260,7 @@
             if(document.getElementById('historyPage').style.display === 'flex') renderLogs();
         }
     });
+
 
     function autoCleanOldRecords() {
         const thirtyDaysAgo = new Date();
@@ -271,15 +290,28 @@
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
-    db.ref('feedback_pending').on('child_added', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
+    // --- 新代码（替换上去） ---
+db.ref('feedbacks').on('child_added', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        // 重要逻辑：检查本地是否已经存过这条反馈（通过时间戳判断）
+        const alreadyExists = feedbackLogs.some(f => f.timestamp === data.timestamp);
+        
+        if (!alreadyExists) {
             feedbackLogs.unshift(data); 
+            
+            // 保持本地 30 天自动清理逻辑，防止手机内存爆掉
+            const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+            feedbackLogs = feedbackLogs.filter(f => (f.timestamp || 0) > thirtyDaysAgo);
+            
             localStorage.setItem('c_feedback_v89', JSON.stringify(feedbackLogs));
-            db.ref('feedback_pending/' + snapshot.key).remove();
+            
+            // 如果用户正开着 Feedback 页面，立即刷新显示
             if(document.getElementById('feedbackPage').style.display === 'flex') renderFeedback();
         }
-    });
+    }
+});
+
 
     function getRealTimeTurno() {
         return calculateTurnoByTimestamp(Date.now());
