@@ -43,10 +43,16 @@
         .card.st-waiting { border-color: var(--orange); }
         .card.st-working { border-color: var(--red); }
         .card.st-completed { border-color: var(--black); }
-        .card.st-annulato { min-height: 55px !important; background: #fafafa; border-color: #e5e5ea; opacity: 0.8; }
+        /* 修改：取消卡片样式 - 淡灰色并变扁 */
+        .card.st-annulato { min-height: 55px !important; background: #f2f2f7; border: 1px solid #d1d1d6; opacity: 0.7; box-shadow: none; }
 
         .card-left { display: flex; flex-direction: column; gap: 6px; flex: 0.7; min-width: 80px; justify-content: center; align-items: flex-start; }
         .card-badge { font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; color: #fff; letter-spacing: 0.3px; white-space: nowrap; }
+        /* 颜色辅助类 */
+        .bg-orange { background-color: var(--orange); }
+        .bg-red { background-color: var(--red); }
+        .bg-black { background-color: var(--black); }
+
         .card-linea { font-size: 22px; font-weight: 700; color: var(--text-main); line-height: 1; margin-left: 2px; }
 
         .card-center { flex: 2; padding-left: 10px; display: flex; flex-direction: column; gap: 3px; justify-content: center; border-right: 1px solid #f2f2f7; }
@@ -167,7 +173,6 @@
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
 
-    // 管理 Firebase：删除 2 日前的内容，第一个开启的 C 端执行
     function cleanCloudHistory() {
         const todayStr = new Date().toISOString().split('T')[0];
         const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -194,7 +199,6 @@
         });
     }
 
-    // 实时同步逻辑：解决取消任务卡片消失问题
     db.ref('history/' + new Date().toISOString().split('T')[0]).on('child_added', (snapshot) => {
         const item = snapshot.val();
         if (item && item.status === 'completed' && !processedStarts.has(item.startA)) {
@@ -272,7 +276,6 @@
 
         Object.keys(cloudData).forEach(id => {
             const item = cloudData[id];
-            
             const taskTurno = item.turno || calculateTurnoByTimestamp(item.startA);
             const taskDay = new Date(item.startA).toLocaleDateString('it-IT');
 
@@ -324,21 +327,34 @@
         const now = Date.now(); const todayStr = new Date().toLocaleDateString('it-IT');
         const currentTurno = getRealTimeTurno();
 
-        const localToDisplay = logs.filter(l => l.day === todayStr && l.t === currentTurno && !l.hideFromBoard).map(l => ({
-            id: l.i, status: 'completed', startA: l.st, endT: l.et, causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true, sortTime: l.et || l.st, startTimeStr: l.s
-        }));
+        // 核心修改：使用 Map 过滤同一时间戳的任务，防止重复
+        const uniqueItemsMap = new Map();
 
         const cloudItems = Object.keys(cloudData).filter(id => {
             const item = cloudData[id];
             const tDay = new Date(item.startA).toLocaleDateString('it-IT');
             const tTurno = item.turno || calculateTurnoByTimestamp(item.startA);
             return tDay === todayStr && tTurno === currentTurno && !item.hideFromBoard;
-        }).map(id => {
+        }).forEach(id => {
             const item = cloudData[id];
-            return { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.status === 'red' || item.status === 'finishing' ? (item.startB || item.startA) : item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+            uniqueItemsMap.set(item.startA, { 
+                id: id, ...item, isLocal: false, 
+                sortTime: (item.status === 'orange') ? item.startA : (item.status === 'red' || item.status === 'finishing' ? (item.startB || item.startA) : item.startA), 
+                startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
+            });
         });
 
-        const all = [...localToDisplay, ...cloudItems].sort((a, b) => {
+        logs.filter(l => l.day === todayStr && l.t === currentTurno && !l.hideFromBoard).forEach(l => {
+            // 如果云端已经有了（即还在活跃列表中），则不显示本地存档版本，防止重复
+            if (!uniqueItemsMap.has(l.st)) {
+                uniqueItemsMap.set(l.st, {
+                    id: l.i, status: 'completed', startA: l.st, endT: l.et, causale: l.c, techName: l.tech, tA: l.tA, tD: l.tD, isLocal: true, sortTime: l.et || l.st, startTimeStr: l.s
+                });
+            }
+        });
+
+        // 排序逻辑：取消任务始终置底
+        const all = Array.from(uniqueItemsMap.values()).sort((a, b) => {
             const aAnn = String(a.causale).includes("ANNULATO"); const bAnn = String(b.causale).includes("ANNULATO");
             if (aAnn && !bAnn) return 1; if (!aAnn && bAnn) return -1;
             const bTo = (!b.isLocal && b.status === 'orange' && Math.round((Date.now() - b.startA) / 60000) >= 15);
@@ -438,7 +454,6 @@
     function deleteDay(e, day) { e.stopPropagation(); if(!confirm("Cancellare i dati del " + day + "?")) return; logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; }); dayHistory = dayHistory.filter(d => d !== day); saveState(); renderLogs(); renderCombinedCards(); }
     function clearAll() { if(!confirm("Cancellare tutti i dati dell'archivio?")) return; logs = []; dayHistory = []; processedStarts.clear(); saveState(); renderLogs(); renderCombinedCards(); }
     
-    // 初始化执行
     window.onload = () => {
         document.getElementById('curYear').innerText = new Date().getFullYear();
         updateHeaderTurno();
