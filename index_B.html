@@ -298,18 +298,37 @@
     }
 
     function archiveIntervention(id, causale, startA, startD, endT, tech) {
-        const nowServer = new Date(endT);
-        const newLog = { 
-            i: id, day: nowServer.toLocaleDateString('it-IT'), 
-            s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
-            tA: Math.round((startD - startA) / 60000), 
-            tD: Math.round((endT - startD) / 60000), 
-            st: startA, c: causale, tech: tech
-        };
-        logs.push(newLog);
-        if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
-        saveState();
+    const nowServer = new Date(endT);
+    const dateKey = nowServer.toISOString().split('T')[0]; // 格式如 2026-04-14
+    
+    const newLog = { 
+        i: id, day: nowServer.toLocaleDateString('it-IT'), 
+        s: new Date(startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+        tA: Math.round((startD - startA) / 60000), 
+        tD: Math.round((endT - startD) / 60000), 
+        st: startA, c: causale, tech: tech
+    };
+    
+    // 原有逻辑：存本地
+    logs.push(newLog);
+    if(!dayHistory.includes(newLog.day)) dayHistory.push(newLog.day);
+    saveState();
+
+    // 新增逻辑：同步到 C 端（如果是 FUORI LINEA 则不发云端）
+    if (id !== 'FUORI') {
+        db.ref(`history/${dateKey}/${id}_${endT}`).set({
+            id: id,
+            startA: startA,
+            startD: startD,
+            endT: endT,
+            causale: causale,
+            techName: tech,
+            status: 'completed',
+            turno: getRealTimeTurno() 
+        });
     }
+}
+
 
     function toggleFuori() {
         if (isPermanentlyLocked) return; // 永久锁死拦截
