@@ -142,8 +142,8 @@
     <div id="modelloModal" class="modal">
         <div class="modal-content">
             <h2 class="modal-h2">Cambio Modello</h2>
-            <div class="f-label">Inserisci Modello (es. RB4195)</div>
-            <input type="text" id="modelloInput" class="f-input" placeholder="RB0000..." autocomplete="off">
+            <div class="f-label">Inserisci Modello</div>
+            <input type="text" id="modelloInput" class="f-input" placeholder="" autocomplete="off">
             <button class="f-submit" onclick="confirmModello()">CONFERMA E CHIAMA</button>
             <div class="f-close" onclick="document.getElementById('modelloModal').style.display='none'">ANNULLA</div>
         </div>
@@ -280,7 +280,6 @@
         causaleSelect.selectedIndex = 0; 
     }
 
-    // 新增拦截逻辑：判断是否是 Cambio
     function initiateCall() {
         const id = lineaInput.value.trim().toLowerCase();
         const causale = causaleSelect.value;
@@ -290,7 +289,6 @@
         if(!causale) { alert("SELEZIONA UNA CAUSALE!"); return; }
 
         if (causale === "Cambio") {
-            // 弹出型号输入框
             document.getElementById('modelloModal').style.display = 'flex';
             setTimeout(() => document.getElementById('modelloInput').focus(), 150);
         } else {
@@ -298,7 +296,6 @@
         }
     }
 
-    // Cambio 确认后的逻辑
     function confirmModello() {
         const modello = document.getElementById('modelloInput').value.trim();
         if (!modello) { alert("INSERIRE MODELLO!"); return; }
