@@ -127,8 +127,22 @@
         .btn-crea-action { background: var(--green); }
         .btn-agg-action { background: #000; }
 
-        /* 只修改了 bottom 属性，将其下移到页面边缘 */
-        .color-picker-wrap { position: fixed; right: 20px; bottom: calc(15px + env(safe-area-inset-bottom)); z-index: 50; width: 40px; height: 40px; background: rgba(0,0,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3); }
+        /* --- 核心修改：颜色按钮靠右底部，自适应任何手机 --- */
+        .color-picker-wrap { 
+            position: fixed; 
+            right: 20px; 
+            bottom: env(safe-area-inset-bottom); /* 严格对齐屏幕最底部安全区域 */
+            z-index: 500; 
+            width: 40px; 
+            height: 40px; 
+            background: rgba(0,0,0,0.1); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            backdrop-filter: blur(5px); 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
         #floorColor { width: 24px; height: 24px; border: none; padding: 0; background: none; border-radius: 50%; overflow: hidden; cursor: pointer; }
         
         #v { background: #fff; display: none; flex-direction: column; z-index: 300; position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding-top: calc(15px + env(safe-area-inset-top)); }
@@ -493,7 +507,7 @@
     function resetModForm(full = true) {
         if(full) document.getElementById('mSearchInput').value = "";
         ['m_mac','m_pos','m_lam','m_pan','m_sca','m_quo'].forEach(i => document.getElementById(i).value = "");
-        document.getElementById('mHistoryBox').innerText = "Cerca un modello per visualizzare i dettagli。";
+        document.getElementById('mHistoryBox').innerText = "Cerca un modello per visualizzare i细节。";
         currentModData = null;
     }
 
