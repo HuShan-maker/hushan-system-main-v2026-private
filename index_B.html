@@ -70,7 +70,7 @@
         .bottom-area { display: flex; flex-direction: column; align-items: center; margin-top: 20px; padding-bottom: 30px; gap: 15px; }
         .fuori-btn { background: var(--btn-gray); border: none; border-radius: 18px; font-size: 14px; font-weight: 800; height: 65px; width: calc(50% + 6px); text-transform: uppercase; transition: 0.3s; position: relative; }
         
-        /* 新增：详情提示框样式（支持 10 条以上滚动） */
+        /* 任务详情窗口样式 */
         #pianoInfoBox {
             width: 100%;
             max-height: 130px; 
@@ -297,7 +297,11 @@
 
     db.ref('active_calls').on('value', (snapshot) => {
         act = snapshot.val() || {};
-        if (isInitialLoad && Object.keys(act).length > 0) {
+        
+        // --- 自动定位逻辑：仅在自己班次内执行 ---
+        const isW = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
+
+        if (isW && isInitialLoad && Object.keys(act).length > 0) {
             let targetPiano = null;
             for (let p = 1; p <= 5; p++) {
                 if (pianoData[p].some(id => act[id] && act[id].status === 'red' && act[id].takenBy === myDeviceId)) {
@@ -313,7 +317,10 @@
             }
             if (targetPiano) curPiano = targetPiano;
             isInitialLoad = false;
-        } else if (isInitialLoad) { isInitialLoad = false; }
+        } else if (isInitialLoad) {
+            isInitialLoad = false; 
+        }
+
         renderGrid(); 
         updateGlobalBadges(); 
         applyTheme();
@@ -329,7 +336,6 @@
         const sTime = firebase.database.ServerValue.TIMESTAMP;
         if (!act[id]) return; 
         
-        // --- 确认对话框：接单时弹出 ---
         if (act[id].status === 'orange') {
             if (confirm(`Vuoi prendere in carico l'intervento per la linea ${id}?`)) {
                 db.ref('active_calls/' + id).update({ 
@@ -448,7 +454,6 @@
                     const row = document.createElement('div');
                     row.className = 'info-row';
                     row.style.color = c;
-                    // 在上班时间内，显示具体的 Causale
                     row.innerHTML = `<span>Linea ${id}</span><span>${item.causale || "-"}</span>`;
                     infoList.appendChild(row);
                 });
@@ -456,7 +461,6 @@
                 infoList.innerHTML = '<div style="text-align:center; font-size:11px; color:#8e8e93; font-weight:700; padding: 5px 0;">NESSUNA CHIAMATA ATTIVA</div>';
             }
         } else {
-            // --- 非上班时间 (例如在家里)，隐藏所有隐私原因 ---
             infoBox.style.borderColor = "var(--btn-gray)"; 
             infoList.innerHTML = `
                 <div style="text-align:center; padding: 5px 0;">
