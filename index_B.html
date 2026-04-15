@@ -479,7 +479,7 @@
     function resetModForm(full = true) {
         if(full) document.getElementById('mSearchInput').value = "";
         ['m_mac','m_pos','m_lam','m_pan','m_sca','m_quo'].forEach(i => document.getElementById(i).value = "");
-        document.getElementById('mHistoryBox').innerText = "Cerca一款款式查看记录。";
+        document.getElementById('mHistoryBox').innerText = "Cerca un modello per visualizzare i dettagli。";
         currentModData = null;
     }
 
@@ -606,9 +606,16 @@
         if (isWorkingTime) {
             infoBox.style.borderColor = c; 
             infoList.innerHTML = '';
+            
+            // 去重逻辑：记录当前楼层已经渲染过的线号
+            const renderedIds = new Set();
             const activeTasks = pianoData[curPiano].filter(id => act[id] && act[id].status === 'orange');
+            
             if (activeTasks.length > 0) {
                 for(const id of activeTasks) {
+                    if (renderedIds.has(id)) continue; // 已处理过该线号则跳过
+                    renderedIds.add(id);
+
                     const item = act[id];
                     const row = document.createElement('div');
                     row.className = 'info-row';
