@@ -181,7 +181,7 @@
             <div id="userNameDisp" class="user-subtitle" onclick="handleNameClick()">Hu_Shan</div>
         </div>
         <div class="btn-stack">
-            <button class="reg-btn" onclick="showModelli()">info modelli</button>
+            <button id="infoModelliBtn" class="reg-btn" onclick="showModelli()">info modelli</button>
             <button class="reg-btn" onclick="showMemoria()">registro</button>
         </div>
     </div>
@@ -481,7 +481,7 @@
         if(type === 'crea') newData.creator = currentUserName;
         await db.ref(`modelli_db/${id}/current`).set(newData);
         
-        alert("Salvato correttamente!");
+        alert("Salvato correctamente!");
         mEditMode = null;
         setModInputsReadOnly(true);
         resetModButtons();
@@ -578,6 +578,18 @@
         const contentArea = document.getElementById('dynamicContent');
         const isWorkingTime = (myShift === getRealTimeTurno()) && !isPermanentlyLocked;
         
+        // --- 控制 info modelli 按钮锁定 ---
+        const infoBtn = document.getElementById('infoModelliBtn');
+        if (isWorkingTime) {
+            infoBtn.classList.remove('locked-btn');
+            infoBtn.style.pointerEvents = "auto";
+            infoBtn.style.opacity = "1";
+        } else {
+            infoBtn.classList.add('locked-btn');
+            infoBtn.style.pointerEvents = "none";
+            infoBtn.style.opacity = "0.6";
+        }
+
         turnoLabel.innerText = myShift;
         if (isWorkingTime) { 
             contentArea.classList.remove('shift-lock-ui'); 
@@ -618,46 +630,33 @@
         
         if (isWorkingTime) {
             infoBox.style.borderColor = c; 
-            // 关键：先构造所有 HTML，一次性写入，避免 await 导致的渲染错乱
-            let htmlBuffer = '';
+            infoList.innerHTML = '';
+            
+            // 去重逻辑：记录当前楼层已经渲染过的线号
             const renderedIds = new Set();
             const activeTasks = pianoData[curPiano].filter(id => act[id] && act[id].status === 'orange');
             
             if (activeTasks.length > 0) {
-                activeTasks.forEach(id => {
+                // 修改：此处使用 map 预处理并一次性渲染，防止 await 导致的列表重复
+                let htmlBuffer = '';
+                const taskPromises = activeTasks.map(async (id) => {
                     if (renderedIds.has(id)) return;
                     renderedIds.add(id);
-
                     const item = act[id];
-                    let causaleText = item.causale || "-";
-                    const rowId = `row-info-${id}`;
-                    
-                    htmlBuffer += `
-                        <div class="info-row" id="${rowId}" style="color:${c}">
-                            <span>Linea ${id}</span>
-                            <span class="causale-val">${causaleText}</span>
-                        </div>`;
-                });
-                infoList.innerHTML = htmlBuffer;
-
-                // 异步处理型号链接，不阻塞主 UI 渲染
-                activeTasks.forEach(async (id) => {
-                    const item = act[id];
-                    const modMatch = (item.causale || "").match(/Cambio\s+([A-Z0-9]+)/i);
-                    if (modMatch) {
+                    let finalC = item.causale || "-";
+                    const modMatch = finalC.match(/Cambio\s+([A-Z0-9]+)/i);
+                    if(modMatch){
                         const modId = modMatch[1].toUpperCase();
                         const checkSnap = await db.ref(`modelli_db/${modId}`).once('value');
-                        if (checkSnap.exists()) {
-                            const rowEl = document.getElementById(`row-info-${id}`);
-                            if (rowEl) {
-                                const spanEl = rowEl.querySelector('.causale-val');
-                                if (spanEl) {
-                                    spanEl.innerHTML = item.causale.replace(modMatch[1], `<span class="clickable-modello" onclick="quickJump('${modId}')">${modMatch[1]}</span>`);
-                                }
-                            }
+                        if(checkSnap.exists()){
+                            finalC = finalC.replace(modMatch[1], `<span class="clickable-modello" onclick="quickJump('${modId}')">${modMatch[1]}</span>`);
                         }
                     }
+                    htmlBuffer += `<div class="info-row" style="color:${c}"><span>Linea ${id}</span><span>${finalC}</span></div>`;
                 });
+                
+                await Promise.all(taskPromises);
+                infoList.innerHTML = htmlBuffer;
             } else {
                 infoList.innerHTML = '<div style="text-align:center; font-size:11px; color:#8e8e93; font-weight:700; padding: 5px 0;">NESSUNA CHIAMATA ATTIVA</div>';
             }
