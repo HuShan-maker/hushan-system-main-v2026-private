@@ -744,7 +744,20 @@
                 </div>
                 <div class="day-content">
                     <table>
-                        <tbody>${groups[day].sort((a,b)=>b.st-a.st).map(l => `<tr><td><b>${l.i}</b></td><td>${l.s}</td><td>${l.c}</td></tr>`).join('')}</tbody>
+                        <thead>
+                            <tr>
+                                <th style="width:20%">LINEA</th>
+                                <th style="width:20%">INIZIO</th>
+                                <th style="width:25%">A & D</th>
+                                <th>CAUSALE</th>
+                            </tr>
+                        </thead>
+                        <tbody>${groups[day].sort((a,b)=>b.st-a.st).map(l => `<tr>
+                            <td><b>${l.i}</b></td>
+                            <td>${l.s}</td>
+                            <td style="font-size:11px; color:#8e8e93; font-weight:700;">A:${l.tA}m / D:${l.tD}m</td>
+                            <td>${l.c}</td>
+                        </tr>`).join('')}</tbody>
                     </table>
                 </div>`;
             container.appendChild(section);
