@@ -552,8 +552,12 @@
         cBtn.innerText = "Crea Cartiglio";
         cBtn.classList.remove('btn-disabled'); 
         aBtn.innerText = "Aggiorna Dati";
+        cBtn.classList.remove('btn-disabled');
+        aBtn.classList.remove('btn-disabled');
         cBtn.style.opacity = "1";
         aBtn.style.opacity = "1";
+        cBtn.style.pointerEvents = "auto";
+        aBtn.style.pointerEvents = "auto";
     }
 
     async function handleModelloSearch(val) {
@@ -604,30 +608,40 @@
             document.getElementById('mHistoryBox').innerHTML = `<span style="color:var(--orange)">Nuovo Modello: ${id}</span>. Clicca Crea per iniziare.`;
         }
     }
-
+    
     function handleModAction(mode) {
-        const idInput = document.getElementById('mSearchInput');
-        const id = idInput.value.replace(/\s+/g, '').toUpperCase();
-        if(!id) { alert("Inserire ID Modello!"); return; }
+    const idInput = document.getElementById('mSearchInput');
+    const id = idInput.value.replace(/\s+/g, '').toUpperCase();
+    if(!id) { alert("Inserire ID Modello!"); return; }
 
-        if(mEditMode === mode) {
-            saveModello(id, mode);
+    const cBtn = document.getElementById('mCreaBtn');
+    const aBtn = document.getElementById('mAggiornaBtn');
+
+    if(mEditMode === mode) {
+        saveModello(id, mode);
+    } else {
+        mEditMode = mode;
+        setModInputsReadOnly(false);
+        
+        if(mode === 'crea') {
+            resetModForm(false);
+            cBtn.innerText = "SALVA";
+            
+            // 彻底禁用 Aggiorna 按钮
+            aBtn.classList.add('btn-disabled'); 
+            aBtn.style.opacity = "0.3";
+            aBtn.style.pointerEvents = "none"; // 核心：使其无法点击
         } else {
-            mEditMode = mode;
-            setModInputsReadOnly(false);
-            const cBtn = document.getElementById('mCreaBtn');
-            const aBtn = document.getElementById('mAggiornaBtn');
-            if(mode === 'crea') {
-                resetModForm(false);
-                cBtn.innerText = "SALVA";
-                aBtn.style.opacity = "0.3";
-            } else {
-                aBtn.innerText = "SALVA";
-                cBtn.style.opacity = "0.3";
-            }
+            // mode === 'aggiorna'
+            aBtn.innerText = "SALVA";
+            
+            // 彻底禁用 Crea 按钮
+            cBtn.classList.add('btn-disabled');
+            cBtn.style.opacity = "0.3";
+            cBtn.style.pointerEvents = "none"; // 核心：使其无法点击
         }
     }
-
+}
     async function saveModello(id, type) {
         const message = (type === 'crea') ? "Vuoi creare questo nuovo modello?" : "Confermi l'aggiornamento dei dati?";
             if (!confirm(message)) return;
