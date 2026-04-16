@@ -118,7 +118,7 @@
         .m-search-box { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--btn-gray); font-size: 18px; font-weight: 900; text-align: center; margin-bottom: 20px; outline: none; text-transform: uppercase; -webkit-user-select: text; user-select: text; }
         .m-form { display: flex; flex-direction: column; gap: 10px; }
         
-                /* 120行：容器高度固定，开启隐藏溢出 */
+        /* 120行：容器样式 */
         .m-row { 
             display: flex; 
             justify-content: space-between; 
@@ -126,45 +126,46 @@
             background: var(--btn-gray); 
             padding: 12px 15px; 
             border-radius: 15px;
-            height: 48px; /* 强制固定高度，防止被撑开 */
+            height: 48px; 
             overflow: hidden; 
         }
 
-        /* 122行：标签宽度 */
         .m-label { 
             font-size: 10px; 
             font-weight: 800; 
             color: #8e8e93; 
             text-transform: uppercase; 
-            width: 40%; 
-            flex-shrink: 0; /* 防止标签被挤压 */
+            width: 35%; 
+            flex-shrink: 0; 
         }
 
-        /* 128行：核心滑动补丁 */
+        /* 核心：新增横向滑动容器 */
+        .m-val-scroll {
+            width: 65%;
+            overflow-x: auto;
+            white-space: nowrap;
+            display: flex;
+            justify-content: flex-end;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .m-input { 
-            width: 60%; 
+            width: 100%; 
             border: none; 
             background: transparent; 
             text-align: right; 
             font-size: 14px; 
             font-weight: 800; 
             outline: none; 
-            
-            /* --- 重点：实现手动拖动感 --- */
-            display: block;            /* 必须块状化才能滚动 */
-            white-space: nowrap;       /* 强制不换行 */
-            overflow-x: auto;          /* 开启横向手动滚动 */
-            -webkit-overflow-scrolling: touch; /* 手机弹性滑动感 */
             padding: 0;
-            margin: 0;
+            pointer-events: none; /* 只读时滑动事件穿透 */
         }
 
-        /* 137行：状态颜色 */
         .m-input[readonly] { color: #8e8e93 !important; }
-        .m-input:not([readonly]) { color: var(--blue) !important; }
+        .m-input:not([readonly]) { color: var(--blue) !important; pointer-events: auto; }
 
-        /* 140行：隐藏滚动条，保持界面干净 */
-        .m-input::-webkit-scrollbar { display: none; width: 0; height: 0; }
+        /* 隐藏滚动条 */
+        .m-val-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
         .m-history { 
             margin-top: 20px; padding: 15px; border-radius: 18px; 
@@ -276,12 +277,12 @@
         </div>
         <input type="text" id="mSearchInput" class="m-search-box" placeholder="Cerca Modello..." oninput="handleModelloSearch(this.value)">
         <div class="m-form">
-            <div class="m-row"><span class="m-label">Macchina Uso</span><input type="text" id="m_mac" class="m-input" placeholder="-" readonly></div>
-            <div class="m-row"><span class="m-label">Posaggio</span><input type="text" id="m_pos" class="m-input" placeholder="-" readonly></div>
-            <div class="m-row"><span class="m-label">Lama o Fresa</span><input type="text" id="m_lam" class="m-input" placeholder="-" readonly></div>
-            <div class="m-row"><span class="m-label">Angolo Pantoscopico</span><input type="text" id="m_pan" class="m-input" placeholder="-" readonly></div>
-            <div class="m-row"><span class="m-label">Angolo Scarico Asta</span><input type="text" id="m_sca" class="m-input" placeholder="-" readonly></div>
-            <div class="m-row"><span class="m-label">Quota Asta</span><input type="text" id="m_quo" class="m-input" placeholder="-" readonly></div>
+            <div class="m-row"><span class="m-label">Macchina Uso</span><div class="m-val-scroll"><input type="text" id="m_mac" class="m-input" placeholder="-" readonly></div></div>
+            <div class="m-row"><span class="m-label">Posaggio</span><div class="m-val-scroll"><input type="text" id="m_pos" class="m-input" placeholder="-" readonly></div></div>
+            <div class="m-row"><span class="m-label">Lama o Fresa</span><div class="m-val-scroll"><input type="text" id="m_lam" class="m-input" placeholder="-" readonly></div></div>
+            <div class="m-row"><span class="m-label">Angolo Pantoscopico</span><div class="m-val-scroll"><input type="text" id="m_pan" class="m-input" placeholder="-" readonly></div></div>
+            <div class="m-row"><span class="m-label">Angolo Scarico Asta</span><div class="m-val-scroll"><input type="text" id="m_sca" class="m-input" placeholder="-" readonly></div></div>
+            <div class="m-row"><span class="m-label">Quota Asta</span><div class="m-val-scroll"><input type="text" id="m_quo" class="m-input" placeholder="-" readonly></div></div>
             
             <div class="m-footer-btns">
                 <button id="mCreaBtn" class="m-half-btn btn-crea-action" onclick="handleModAction('crea')">Crea Cartiglio</button>
@@ -481,6 +482,11 @@
             document.getElementById('m_pan').value = d.panto || "";
             document.getElementById('m_sca').value = d.scarico || "";
             document.getElementById('m_quo').value = d.quota || "";
+
+            // --- 核心新增：确保所有行在搜索后重置位置 ---
+            setTimeout(() => {
+                document.querySelectorAll('.m-val-scroll').forEach(el => el.scrollLeft = el.scrollWidth);
+            }, 50);
 
             cBtn.innerText = "GIA' CREATO";
             cBtn.classList.add('btn-disabled');
