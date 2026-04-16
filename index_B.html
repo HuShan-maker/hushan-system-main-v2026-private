@@ -118,32 +118,35 @@
         .m-search-box { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--btn-gray); font-size: 18px; font-weight: 900; text-align: center; margin-bottom: 20px; outline: none; text-transform: uppercase; -webkit-user-select: text; user-select: text; }
         .m-form { display: flex; flex-direction: column; gap: 10px; }
         
-        /* --- 款式信息滑动核心改装 --- */
+        /* 核心改装样式 */
         .m-row { 
             display: flex; 
             align-items: center; 
             background: var(--btn-gray); 
             border-radius: 15px;
-            height: 48px; 
-            overflow: hidden; /* 裁剪划出去的内容 */
+            height: 52px; /* 稍微增加高度以支持两行标题 */
+            overflow: hidden;
             position: relative;
         }
 
         .m-label { 
-            font-size: 10px; 
+            font-size: 9px; /* 稍微缩小一点标题字体 */
             font-weight: 900; 
             color: #8e8e93; 
             text-transform: uppercase; 
-            width: 38%; /* 左侧比例 */
+            width: 38%; 
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            padding-right: 12px;
-            background: var(--btn-gray); /* 关键：挡板背景色 */
-            z-index: 10; /* 置顶，压住滑过来的字 */
+            padding: 0 10px;
+            background: var(--btn-gray); /* 核心遮挡背景 */
+            z-index: 10; 
             flex-shrink: 0;
-            border-right: 1px solid rgba(0,0,0,0.08); /* 中间分割线 */
+            border-right: 1px solid rgba(0,0,0,0.08); 
+            text-align: right;
+            line-height: 1.1; /* 两行标题不拥挤 */
+            white-space: normal; /* 允许换行 */
         }
 
         .m-val-scroll {
@@ -154,8 +157,8 @@
             white-space: nowrap;
             display: flex;
             align-items: center;
-            justify-content: flex-end; /* 默认靠右 */
-            -webkit-overflow-scrolling: touch; /* 手机滑动惯性 */
+            justify-content: flex-end; 
+            -webkit-overflow-scrolling: touch; 
             padding-left: 10px;
             padding-right: 15px;
             z-index: 1;
@@ -172,17 +175,18 @@
             color: #8e8e93;
             width: auto;
             min-width: 100%;
+            /* 关键补丁：只读模式下让手指动作穿透到父容器，激活滑动 */
+            pointer-events: none; 
         }
 
         .m-input:not([readonly]) { 
             color: var(--blue) !important; 
             background: rgba(0,122,255,0.05);
             min-width: 100%;
+            pointer-events: auto; /* 编辑模式下恢复点击录入 */
         }
 
-        /* 隐藏所有滑动条 */
-        .m-val-scroll::-webkit-scrollbar, 
-        #pianoInfoBox::-webkit-scrollbar { display: none; }
+        .m-val-scroll::-webkit-scrollbar { display: none; }
 
         .m-history { 
             margin-top: 20px; padding: 15px; border-radius: 18px; 
@@ -297,8 +301,8 @@
             <div class="m-row"><span class="m-label">Macchina Uso</span><div class="m-val-scroll"><input type="text" id="m_mac" class="m-input" placeholder="-" readonly></div></div>
             <div class="m-row"><span class="m-label">Posaggio</span><div class="m-val-scroll"><input type="text" id="m_pos" class="m-input" placeholder="-" readonly></div></div>
             <div class="m-row"><span class="m-label">Lama o Fresa</span><div class="m-val-scroll"><input type="text" id="m_lam" class="m-input" placeholder="-" readonly></div></div>
-            <div class="m-row"><span class="m-label">Angolo Panto</span><div class="m-val-scroll"><input type="text" id="m_pan" class="m-input" placeholder="-" readonly></div></div>
-            <div class="m-row"><span class="m-label">Scarico Asta</span><div class="m-val-scroll"><input type="text" id="m_sca" class="m-input" placeholder="-" readonly></div></div>
+            <div class="m-row"><span class="m-label">Angolo Pantoscopico</span><div class="m-val-scroll"><input type="text" id="m_pan" class="m-input" placeholder="-" readonly></div></div>
+            <div class="m-row"><span class="m-label">Angolo Scarico Asta</span><div class="m-val-scroll"><input type="text" id="m_sca" class="m-input" placeholder="-" readonly></div></div>
             <div class="m-row"><span class="m-label">Quota Asta</span><div class="m-val-scroll"><input type="text" id="m_quo" class="m-input" placeholder="-" readonly></div></div>
             
             <div class="m-footer-btns">
@@ -470,7 +474,8 @@
     function setModInputsReadOnly(isReadOnly) {
         document.querySelectorAll('.m-input').forEach(input => {
             input.readOnly = isReadOnly;
-            input.style.width = isReadOnly ? "auto" : "100%";
+            // 重要补丁：
+            input.style.pointerEvents = isReadOnly ? "none" : "auto";
         });
     }
 
@@ -503,9 +508,9 @@
             document.getElementById('m_sca').value = d.scarico || "";
             document.getElementById('m_quo').value = d.quota || "";
 
-            // 搜到信息后，让所有滚动容器复位到开头（最右侧）
+            // 核心：复位滚动位置
             setTimeout(() => {
-                document.querySelectorAll('.m-val-scroll').forEach(el => el.scrollLeft = el.scrollWidth);
+                document.querySelectorAll('.m-val-scroll').forEach(el => el.scrollLeft = 10000);
             }, 60);
 
             cBtn.innerText = "GIA' CREATO";
