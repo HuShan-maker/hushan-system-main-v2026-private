@@ -442,7 +442,7 @@
                         if(h.diff) {
                             for(let key in h.diff) diffArr.push(`${key}: ${h.diff[key].old} → ${h.diff[key].new}`);
                         }
-                        const diffText = diffArr.length > 0 ? diffArr.join(' | ') : "Nessuna modifica遗留";
+                        const diffText = diffArr.length > 0 ? diffArr.join(' | ') : "Nessuna modifica rilevata";
                         html += `<div class="history-item"><span style="color:var(--orange)">[AGG]</span> da <b>${h.by}</b> il ${dateStr}<br>Modificato: ${diffText}</div>`;
                     }
                 });
@@ -544,7 +544,7 @@
         if (!act[id]) return; 
         
         if (act[id].status === 'orange') {
-            if (confirm(`Prendere in carico linea ${id}?`)) {
+            if (confirm(`Prendere in carico la linea ${id}?`)) {
                 db.ref('active_calls/' + id).update({ 
                     status: 'red', startD: sTime, takenBy: myDeviceId, techName: currentUserName 
                 });
