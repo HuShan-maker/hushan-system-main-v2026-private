@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>C - Tabellone v8.8.5</title>
+    <title>C - Tabellone v8.9.1</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -44,7 +44,6 @@
         .card.st-working { border-color: var(--red); }
         .card.st-completed { border-color: var(--black); }
         
-        /* 修改点 1: CSS 类名改为两个 L 确保匹配 */
         .card.st-annullato { 
             min-height: 55px !important; 
             background: #e5e5ea !important; 
@@ -93,6 +92,11 @@
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { padding: 10px 2px; text-align: center; font-size: 11px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
         th { font-weight: 700; color: var(--text-sec); text-transform: uppercase; font-size: 9px; }
+        
+        /* 排序表头样式 */
+        .sortable-th { color: var(--blue) !important; cursor: pointer; text-decoration: underline; }
+        .sortable-th:active { opacity: 0.5; }
+
         .tech-cell { font-size: 10px; font-weight: 600; color: var(--text-main); word-break: break-all; }
 
         .fb-read-btn {
@@ -186,6 +190,9 @@
     let feedbackLogs = JSON.parse(localStorage.getItem('c_feedback_v89') || '[]');
     let processedStarts = new Set(logs.map(l => l.st));
     let cloudData = {};
+    
+    // 用于记录每一天的当前排序方式：'time' (默认), 'linea', 'causale'
+    let daySortModes = {}; 
 
     function showHistory() { document.getElementById('historyPage').style.display = 'flex'; renderLogs(); }
     function closeHistory() { 
@@ -206,9 +213,6 @@
             return todayStr;
         }, (error, committed) => {
             if (committed) {
-                console.log("Primo avvio rilevato. Pulizia Firebase in corso...");
-    
-                // 1. 清理云端 2 天前的历史记录 (history)
                 db.ref('history').once('value').then(snap => {
                     const allHistory = snap.val();
                     if (allHistory) {
@@ -219,8 +223,6 @@
                         });
                     }
                 });
-    
-                // 2. 清理云端 2 天前的反馈记录 (feedbacks)
                 db.ref('feedbacks').once('value').then(fbSnap => {
                     const allFb = fbSnap.val();
                     if (allFb) {
@@ -236,7 +238,6 @@
         });
     }
     
-    // 实时同步：获取当天已完成的任务并存入本地 Archivio
     db.ref('history/' + new Date().toISOString().split('T')[0]).on('child_added', (snapshot) => {
         const item = snapshot.val();
         if (item && item.status === 'completed' && !processedStarts.has(item.startA)) {
@@ -290,23 +291,15 @@
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
     }
 
-    // --- 新代码（替换上去） ---
 db.ref('feedbacks').on('child_added', (snapshot) => {
     const data = snapshot.val();
     if (data) {
-        // 重要逻辑：检查本地是否已经存过这条反馈（通过时间戳判断）
         const alreadyExists = feedbackLogs.some(f => f.timestamp === data.timestamp);
-        
         if (!alreadyExists) {
             feedbackLogs.unshift(data); 
-            
-            // 保持本地 30 天自动清理逻辑，防止手机内存爆掉
             const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
             feedbackLogs = feedbackLogs.filter(f => (f.timestamp || 0) > thirtyDaysAgo);
-            
             localStorage.setItem('c_feedback_v89', JSON.stringify(feedbackLogs));
-            
-            // 如果用户正开着 Feedback 页面，立即刷新显示
             if(document.getElementById('feedbackPage').style.display === 'flex') renderFeedback();
         }
     }
@@ -350,7 +343,7 @@ db.ref('feedbacks').on('child_added', (snapshot) => {
     });
 
     function archiveTask(id, item) {
-        let startD = item.startD || item.startA;
+        let startD = item.startD || item.startB || item.startA;
         let endT = item.endT || Date.now();
         const newEntry = {
             i: id, day: new Date(item.startA).toLocaleDateString('it-IT'),
@@ -378,17 +371,16 @@ db.ref('feedbacks').on('child_added', (snapshot) => {
         const list = document.getElementById('activeList'); list.innerHTML = '';
         const now = Date.now(); const todayStr = new Date().toLocaleDateString('it-IT');
         const currentTurno = getRealTimeTurno();
-
         const uniqueItemsMap = new Map();
 
-        const cloudItems = Object.keys(cloudData).filter(id => {
+        Object.keys(cloudData).filter(id => {
             const item = cloudData[id];
             const tDay = new Date(item.startA).toLocaleDateString('it-IT');
             const tTurno = item.turno || calculateTurnoByTimestamp(item.startA);
             return tDay === todayStr && tTurno === currentTurno && !item.hideFromBoard;
         }).forEach(id => {
             const item = cloudData[id];
-            uniqueItemsMap.set(item.startA, { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+            uniqueItemsMap.set(item.startA, { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.startD || item.startB || item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
         });
 
         logs.filter(l => l.day === todayStr && l.t === currentTurno && !l.hideFromBoard).forEach(l => {
@@ -401,7 +393,6 @@ db.ref('feedbacks').on('child_added', (snapshot) => {
             const aAnn = String(a.causale).toUpperCase().includes("ANNULL"); 
             const bAnn = String(b.causale).toUpperCase().includes("ANNULL");
             if (aAnn && !bAnn) return 1; if (!aAnn && bAnn) return -1;
-            
             const bTo = (!b.isLocal && b.status === 'orange' && Math.round((now - b.startA) / 60000) >= 15);
             const aTo = (!a.isLocal && a.status === 'orange' && Math.round((now - a.startA) / 60000) >= 15);
             if (aTo && !bTo) return -1; if (!aTo && bTo) return 1;
@@ -410,8 +401,25 @@ db.ref('feedbacks').on('child_added', (snapshot) => {
 
         all.forEach(item => {
             const isAnnulato = String(item.causale).toUpperCase().includes("ANNULL");
-            let waitMin = item.isLocal ? item.tA : Math.round((now-item.startA)/60000);
-            let workMin = item.isLocal ? item.tD : (item.startB ? Math.round((now-item.startB)/60000) : 0);
+            
+            // 数据兼容性：支持 startD 和 startB
+            let startActionTime = item.startD || item.startB || null; 
+            let waitMin, workMin;
+
+            if (item.isLocal) {
+                waitMin = item.tA; workMin = item.tD;
+            } else {
+                if (item.status === 'orange') {
+                    waitMin = Math.round((now - item.startA) / 60000);
+                    workMin = 0;
+                } else {
+                    // 状态为红色或正在进行：锁定等待时间，计算工作时间
+                    let sd = startActionTime || now;
+                    waitMin = Math.round((sd - item.startA) / 60000);
+                    workMin = Math.round((now - sd) / 60000);
+                }
+            }
+
             let statusL, colorC, statusK;
             if(item.status === 'orange') { statusL = 'ATTESA'; colorC = 'orange'; statusK = 'waiting'; }
             else if(item.status === 'red' || item.status === 'finishing') { statusL = 'LAVORO'; colorC = 'red'; statusK = 'working'; }
@@ -434,29 +442,54 @@ db.ref('feedbacks').on('child_added', (snapshot) => {
         });
     }
 
+    // 排序逻辑处理器
+    function setDaySort(day, mode) {
+        daySortModes[day] = mode;
+        renderLogs();
+    }
+
     function renderLogs() {
         const container = document.getElementById('logContainer'); container.innerHTML = '';
         const now = new Date();
         const todayStr = now.toLocaleDateString('it-IT');
-        const yesterday = new Date(now); yesterday.setDate(now.getDate()-1);
-        const yesterdayStr = yesterday.toLocaleDateString('it-IT');
+        const yesterdayStr = new Date(now.getTime() - 86400000).toLocaleDateString('it-IT');
 
         dayHistory.sort((a,b)=>b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join(''))).forEach(day => {
-            const dayLogs = logs.filter(l => l.day === day).sort((a,b)=>b.st-a.st);
+            let dayLogs = logs.filter(l => l.day === day);
+            const sortMode = daySortModes[day] || 'time';
+
+            // 根据选择的模式排序
+            if (sortMode === 'linea') {
+                dayLogs.sort((a, b) => String(a.i).localeCompare(String(b.i), undefined, {numeric: true}));
+            } else if (sortMode === 'causale') {
+                dayLogs.sort((a, b) => String(a.c).localeCompare(String(b.c)));
+            } else {
+                dayLogs.sort((a, b) => b.st - a.st); // 默认时间倒序
+            }
+
             const countA = dayLogs.filter(l => l.t === "Turno A" && !String(l.c).toUpperCase().includes("ANNULL") && !String(l.c).includes("CHIUSURA")).length;
             const countB = dayLogs.filter(l => l.t === "Turno B" && !String(l.c).toUpperCase().includes("ANNULL") && !String(l.c).includes("CHIUSURA")).length;
             
             const canDelete = (day !== todayStr && day !== yesterdayStr);
-            
+            const isCollapsed = (day !== todayStr && !daySortModes[day]); // 如果没点过排序且不是今天，则收起
+
             const section = document.createElement('div');
             section.innerHTML = `
                 <div class="day-header" onclick="toggleDay(this)">
                     <div>${canDelete ? `<span style="color:var(--red); margin-right:12px;" onclick="deleteDay(event, '${day}')">×</span>` : ''}<span>${day}${day === todayStr ? ' (OGGI)' : ''}</span></div>
-                    <div class="day-stats-box">A: <b>${countA}</b> | B: <b>${countB}</b> <span class="arrow-icon">${day === todayStr ? '▼' : '▶'}</span></div>
+                    <div class="day-stats-box">A: <b>${countA}</b> | B: <b>${countB}</b> <span class="arrow-icon">${isCollapsed ? '▶' : '▼'}</span></div>
                 </div>
-                <div class="day-content" style="display: ${day === todayStr ? 'block' : 'none'}">
+                <div class="day-content" style="display: ${isCollapsed ? 'none' : 'block'}">
                     <table>
-                        <thead><tr><th>LINEA</th><th>ATTESA</th><th>DURATA</th><th>CAUSALE</th><th>NOME</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th class="sortable-th" onclick="setDaySort('${day}', 'linea')">LINEA ↕</th>
+                                <th>ATTESA</th>
+                                <th>DURATA</th>
+                                <th class="sortable-th" onclick="setDaySort('${day}', 'causale')">CAUSALE ↕</th>
+                                <th>NOME</th>
+                            </tr>
+                        </thead>
                         <tbody>${dayLogs.map(l => `<tr><td><b>${l.i}</b></td><td>${l.tA}m</td><td>${l.tD}m</td><td style="font-size:9px">${l.c}<br><span style="color:#8e8e93; font-size:8px;">[${l.t || calculateTurnoByTimestamp(l.st)}]</span></td><td>${l.tech}</td></tr>`).join('')}</tbody>
                     </table>
                 </div>`;
@@ -468,9 +501,7 @@ db.ref('feedbacks').on('child_added', (snapshot) => {
         if(!confirm("Vuoi svuotare tutti i record di 2 giorni prima?")) return;
         const now = new Date();
         const todayStr = now.toLocaleDateString('it-IT');
-        const yesterday = new Date(now); yesterday.setDate(now.getDate()-1);
-        const yesterdayStr = yesterday.toLocaleDateString('it-IT');
-        
+        const yesterdayStr = new Date(now.getTime() - 86400000).toLocaleDateString('it-IT');
         logs = logs.filter(l => l.day === todayStr || l.day === yesterdayStr);
         dayHistory = dayHistory.filter(d => d === todayStr || d === yesterdayStr);
         processedStarts = new Set(logs.map(l => l.st));
@@ -479,33 +510,19 @@ db.ref('feedbacks').on('child_added', (snapshot) => {
 
     function toggleDay(header) { const content = header.nextElementSibling; const arrow = header.querySelector('.arrow-icon'); const isHidden = content.style.display === 'none'; content.style.display = isHidden ? 'block' : 'none'; if(arrow) arrow.innerText = isHidden ? '▼' : '▶'; }
     function deleteDay(e, day) { e.stopPropagation(); if(!confirm("Eliminare record del " + day + "?")) return; logs = logs.filter(l => { if(l.day === day) processedStarts.delete(l.st); return l.day !== day; }); dayHistory = dayHistory.filter(d => d !== day); saveState(); renderLogs(); renderCombinedCards(); }
-    
     function clearFeedback() { if(confirm("Cancellare tutti i feedback?")) { feedbackLogs=[]; saveState(); renderFeedback(); } }
+    
     function renderFeedback() {
-        const container = document.getElementById('feedbackContainer'); 
-        container.innerHTML = '';
-        if (feedbackLogs.length === 0) { 
-            container.innerHTML = '<div style="text-align:center;padding:50px;color:#8e8e93;">Nessun feedback presente.</div>'; 
-            return; 
-        }
-            feedbackLogs.forEach(fb => {
-        const div = document.createElement('div'); 
-        div.className = 'fb-card';
-        div.innerHTML = `
-            <div class="fb-head">
-                <div class="fb-name">👤 ${fb.attrezzista}</div>
-                <div class="fb-score">⭐ ${fb.punteggio}/5</div>
-            </div>
-            <div class="fb-msg">"${fb.messaggio || "-"}"</div>
-            <div class="fb-meta">
-                <span>TURNO: ${fb.turno || "N/A"}</span>
-                <span>${fb.data || ""}</span>
-            </div>`;
-        container.appendChild(div);
-    });
-
+        const container = document.getElementById('feedbackContainer'); container.innerHTML = '';
+        if (feedbackLogs.length === 0) { container.innerHTML = '<div style="text-align:center;padding:50px;color:#8e8e93;">Nessun feedback presente.</div>'; return; }
+        feedbackLogs.forEach(fb => {
+            const div = document.createElement('div'); div.className = 'fb-card';
+            div.innerHTML = `<div class="fb-head"><div class="fb-name">👤 ${fb.attrezzista}</div><div class="fb-score">⭐ ${fb.punteggio}/5</div></div>
+                <div class="fb-msg">"${fb.messaggio || "-"}"</div>
+                <div class="fb-meta"><span>TURNO: ${fb.turno || "N/A"}</span><span>${fb.data || ""}</span></div>`;
+            container.appendChild(div);
+        });
     }
-
 
     window.onload = () => {
         document.getElementById('curYear').innerText = new Date().getFullYear();
