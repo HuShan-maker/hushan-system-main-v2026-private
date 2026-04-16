@@ -118,7 +118,7 @@
         .m-search-box { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--btn-gray); font-size: 18px; font-weight: 900; text-align: center; margin-bottom: 20px; outline: none; text-transform: uppercase; -webkit-user-select: text; user-select: text; }
         .m-form { display: flex; flex-direction: column; gap: 10px; }
         
-        /* 改装：横向滑动滑道 */
+        /* 改装样式：真正实现只读可滑动 */
         .m-row { 
             display: flex; 
             justify-content: space-between; 
@@ -139,18 +139,18 @@
             flex-shrink: 0; 
         }
 
-        /* 核心补丁：横向滑动容器 */
+        /* 核心：这个 div 才是真正能划动的 */
         .m-val-scroll {
             width: 65%;
             overflow-x: auto;
             white-space: nowrap;
             display: flex;
             justify-content: flex-end;
-            -webkit-overflow-scrolling: touch;
+            -webkit-overflow-scrolling: touch; /* 惯性滑动 */
         }
+        .m-val-scroll::-webkit-scrollbar { display: none; }
 
         .m-input { 
-            width: 100%; 
             border: none; 
             background: transparent; 
             text-align: right; 
@@ -158,14 +158,18 @@
             font-weight: 800; 
             outline: none; 
             padding: 0;
-            pointer-events: none; /* 穿透：解决 readonly 标签不响应滑动的问题 */
+            color: #8e8e93;
+            width: auto;
+            min-width: 100%;
         }
 
-        .m-input[readonly] { color: #8e8e93 !important; }
-        .m-input:not([readonly]) { color: var(--blue) !important; pointer-events: auto; }
-
-        /* 隐藏滚动条 */
-        .m-val-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+        /* 修改模式下的样式 */
+        .m-input:not([readonly]) { 
+            color: var(--blue) !important; 
+            background: rgba(0,122,255,0.05);
+            min-width: 100%;
+            text-align: right;
+        }
 
         .m-history { 
             margin-top: 20px; padding: 15px; border-radius: 18px; 
@@ -451,7 +455,11 @@
     function closeModelli() { document.getElementById('modelli_v1').style.display = 'none'; resetModForm(); setModInputsReadOnly(true); resetModButtons(); }
 
     function setModInputsReadOnly(isReadOnly) {
-        document.querySelectorAll('.m-input').forEach(input => input.readOnly = isReadOnly);
+        document.querySelectorAll('.m-input').forEach(input => {
+            input.readOnly = isReadOnly;
+            // 补丁：只读模式下缩短宽度允许滚动，编辑模式占满宽度
+            input.style.width = isReadOnly ? "auto" : "100%";
+        });
     }
 
     function resetModButtons() {
@@ -483,7 +491,7 @@
             document.getElementById('m_sca').value = d.scarico || "";
             document.getElementById('m_quo').value = d.quota || "";
 
-            // --- 核心新增：确保所有行在搜索后重置位置 ---
+            // 核心修复：搜到信息后，让所有滚动容器复位到右侧（文字开头）
             setTimeout(() => {
                 document.querySelectorAll('.m-val-scroll').forEach(el => el.scrollLeft = el.scrollWidth);
             }, 50);
