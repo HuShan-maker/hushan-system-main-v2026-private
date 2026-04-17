@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>B - Attrezzisti v8</title>
+    <title>B - Attrezzisti v8.1.0</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
@@ -342,6 +342,14 @@
             <div class="m-row"><span class="m-label">Angolo Scarico Asta</span><div class="m-val-scroll"><span class="m-text-view" id="v_sca">-</span><input type="text" id="m_sca" class="m-input" placeholder="-"></div></div>
             <div class="m-row"><span class="m-label">Quota Asta</span><div class="m-val-scroll"><span class="m-text-view" id="v_quo">-</span><input type="text" id="m_quo" class="m-input" placeholder="-"></div></div>
             
+            <div class="m-row" style="height: auto; min-height: 80px; align-items: flex-start;">
+                <span class="m-label" style="height: 100%; padding-top: 15px;">Note Tecniche</span>
+                <div class="m-val-scroll" style="height: auto; min-height: 80px; align-items: flex-start; padding-top: 12px; justify-content: flex-start;">
+                    <span class="m-text-view" id="v_not" style="-webkit-line-clamp: 5; text-align: left; font-size: 12px; font-weight: 600;">-</span>
+                    <textarea id="m_not" class="m-input" style="text-align: left; height: 70px; font-family: inherit; font-size: 13px;" placeholder="Inserisci consigli o note tecniche..."></textarea>
+                </div>
+            </div>
+
             <div class="m-footer-btns">
                 <button id="mCreaBtn" class="m-half-btn btn-crea-action" onclick="handleModAction('crea')">Crea Cartiglio</button>
                 <button id="mAggiornaBtn" class="m-half-btn btn-agg-action" onclick="handleModAction('aggiorna')">Aggiorna Dati</button>
@@ -518,18 +526,19 @@
         mEditMode = null;
     }
 
-    // --- 核心逻辑：字体自适应 + 自动缩放 ---
+    // --- 核心逻辑同步：加入 'not' 字段 ---
     function syncDisplayValues() {
-        ['mac','pos','lam','pan','sca','quo'].forEach(k => {
+        ['mac','pos','lam','pan','sca','quo', 'not'].forEach(k => {
             const input = document.getElementById('m_'+k);
             const view = document.getElementById('v_'+k);
+            if(!input || !view) return;
             const val = input.value || "-";
             view.innerText = val;
             
-            // 自动缩放字体逻辑
+            if(k === 'not') return; // Note 框不需要字体缩放逻辑
+
             view.style.fontSize = "14px"; 
             let fontSize = 14;
-            // 如果文字高度超过了行高(52px)的限制，自动缩小字体
             while (view.scrollHeight > 44 && fontSize > 8) {
                 fontSize -= 0.5;
                 view.style.fontSize = fontSize + "px";
@@ -577,6 +586,7 @@
             document.getElementById('m_pan').value = d.panto || "";
             document.getElementById('m_sca').value = d.scarico || "";
             document.getElementById('m_quo').value = d.quota || "";
+            document.getElementById('m_not').value = d.note || ""; // 获取笔记
 
             syncDisplayValues(); 
 
@@ -653,6 +663,7 @@
             panto: document.getElementById('m_pan').value.trim(),
             scarico: document.getElementById('m_sca').value.trim(),
             quota: document.getElementById('m_quo').value.trim(),
+            note: document.getElementById('m_not').value.trim(), // 保存笔记
             at: Date.now(), by: currentUserName
         };
 
@@ -662,7 +673,7 @@
         let diffObj = null;
         if(type === 'aggiorna' && currentModData) {
             diffObj = {};
-            const keys = ["macchina", "posaggio", "lama", "panto", "scarico", "quota"];
+            const keys = ["macchina", "posaggio", "lama", "panto", "scarico", "quota", "note"];
             keys.forEach(k => {
                 const oldVal = currentModData[k] ? String(currentModData[k]).trim() : "";
                 const newVal = newData[k] ? String(newData[k]).trim() : "";
@@ -697,7 +708,10 @@
 
     function resetModForm(full = true) {
         if(full) document.getElementById('mSearchInput').value = "";
-        ['m_mac','m_pos','m_lam','m_pan','m_sca','m_quo'].forEach(i => document.getElementById(i).value = "");
+        ['m_mac','m_pos','m_lam','m_pan','m_sca','m_quo','m_not'].forEach(i => {
+            const el = document.getElementById(i);
+            if(el) el.value = "";
+        });
         syncDisplayValues(); 
         document.getElementById('mHistoryBox').innerText = "Cerca un modello per visualizzare il cartiglio。";
         currentModData = null;
