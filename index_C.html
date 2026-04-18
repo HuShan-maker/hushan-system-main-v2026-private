@@ -41,7 +41,7 @@
             position: relative; transition: 0.3s;
         }
 
-        /* --- 边框闪烁特效全覆盖 --- */
+        /* --- 边框闪烁特效 --- */
         .card.st-waiting { border-color: var(--orange); animation: orangePulse 2s infinite; }
         .card.st-working { border-color: var(--red); animation: redPulse 2s infinite; }
         .card.st-prep { border-color: var(--purple); animation: purplePulse 2s infinite; }
@@ -60,7 +60,6 @@
             box-shadow: none !important;
         }
 
-        /* 调整左侧宽度，防止长文字压住中间内容 */
         .card-left { display: flex; flex-direction: column; gap: 6px; flex: 1.1; min-width: 120px; justify-content: center; align-items: flex-start; }
         .card-badge { font-size: 9px; font-weight: 800; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; color: #fff; letter-spacing: 0.3px; white-space: normal; line-height: 1.1; text-align: center; }
         
@@ -79,11 +78,12 @@
         .total-label { font-size: 8px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; margin-bottom: 2px; }
         .total-val { font-size: 18px; font-weight: 700; color: var(--black); line-height: 1; }
 
+        /* 紧迫感晃动动画 */
         .timeout-critical { 
             background: #ff9500 !important; 
             border: 4px solid #ff3b30 !important; 
-            animation: urgentPulse 1s infinite ease-in-out; 
-            box-shadow: 0 0 25px rgba(255, 59, 48, 0.6);
+            animation: urgentPulse 1s infinite ease-in-out !important; 
+            box-shadow: 0 0 25px rgba(255, 59, 48, 0.6) !important;
             z-index: 10;
         }
         .timeout-critical .card-linea, 
@@ -383,9 +383,12 @@
             const aAnn = String(a.causale).toUpperCase().includes("ANNULL"); 
             const bAnn = String(b.causale).toUpperCase().includes("ANNULL");
             if (aAnn && !bAnn) return 1; if (!aAnn && bAnn) return -1;
-            const bTo = (!b.isLocal && b.status === 'orange' && Math.round((now - b.startA) / 60000) >= 15);
-            const aTo = (!a.isLocal && a.status === 'orange' && Math.round((now - a.startA) / 60000) >= 15);
+            
+            // 排序逻辑也修正：橙色或紫色且超时的排在最上面
+            const bTo = (!b.isLocal && (b.status === 'orange' || b.status === 'purple') && Math.round((now - b.startA) / 60000) >= 15);
+            const aTo = (!a.isLocal && (a.status === 'orange' || a.status === 'purple') && Math.round((now - a.startA) / 60000) >= 15);
             if (aTo && !bTo) return -1; if (!aTo && bTo) return 1;
+            
             return b.sortTime - a.sortTime;
         });
 
@@ -408,7 +411,11 @@
             
             const card = document.createElement('div');
             card.className = `card st-${isAnnulato ? 'annullato' : statusK}`;
-            if(!item.isLocal && item.status === 'orange' && waitMin >= 15) card.classList.add('timeout-critical');
+            
+            // --- 核心修正点：只要是待命中（橙/紫）且超过15分钟，就晃动 ---
+            if(!item.isLocal && (item.status === 'orange' || item.status === 'purple') && waitMin >= 15) {
+                card.classList.add('timeout-critical');
+            }
             
             if (isAnnulato) {
                 card.innerHTML = `<div class="card-left"><div class="card-linea" style="color:#000;">${item.id}</div></div>
