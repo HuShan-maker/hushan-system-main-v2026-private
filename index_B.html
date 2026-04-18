@@ -693,7 +693,7 @@
         if (!act[id]) return; 
         
         if (act[id].status === 'orange') {
-            if (confirm(`Prendere in carico la linea ${id}?`)) {
+            if (confirm(`Prendere in carico la linea ${id}?CONTROLLA GLI ATTREZZI PRIMA DI ANDARE!`)) {
                 db.ref('active_calls/' + id).update({ 
                     status: 'purple', takenBy: myDeviceId, techName: currentUserName 
                 });
