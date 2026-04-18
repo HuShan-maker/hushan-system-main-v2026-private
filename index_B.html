@@ -742,13 +742,24 @@
                     startB: sTime 
                 });
             } else {
-                // 点击取消的情况：认为道具不齐全，自动取消
-                const now = Date.now() + serverTimeOffset;
-                // 归档一条取消记录，方便C端看板查看原因
-                archiveIntervention(id, "MANCANO ATTREZZATURE (ANNULLATO)", item.startA, now, now, currentUserName);
-                db.ref('active_calls/' + id).remove();
-            }
+                // 如果不齐全点取消：自动取消，C端和历史记录显示 annullato da attrezzista
+            const now = Date.now() + serverTimeOffset;
+            
+            // 归档一条取消记录 (保持你原有的 archiveIntervention 参数结构)
+            archiveIntervention(
+                id, 
+                "ANNULLATO DA ATTREZZISTA", // 强制原因
+                item.startA, 
+                now, 
+                now, 
+                currentUserName
+            );
+            
+            // 从数据库移除当前呼叫
+            db.ref('active_calls/' + id).remove();
+            alert("Chiamata annullata correttamente.");
         }
+    }
         // 3. 红色变完成 (归档)
         else if (item.status === 'red' && item.takenBy === myDeviceId) {
             const now = Date.now() + serverTimeOffset;
