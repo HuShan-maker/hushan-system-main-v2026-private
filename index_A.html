@@ -59,12 +59,21 @@
             cursor: pointer; text-align-last: center; -webkit-appearance: none;
         }
 
+        /* 强制校验区域样式 */
+        .check-area {
+            margin: 5px 0; padding: 12px; background: #fff9c4; border-radius: 20px; 
+            width: 100%; border: 3px solid #fbc02d; transition: border-color 0.3s;
+        }
+        .check-flex { display: flex; align-items: center; gap: 12px; }
+        #checkPezzi { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--black); }
+        .check-label { font-weight: 800; color: #000; font-size: 13px; line-height: 1.2; text-transform: uppercase; }
+
         .main-btn {
-            width: 260px; height: 260px; border-radius: 55px; 
+            width: 250px; height: 250px; border-radius: 55px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: none;
             box-shadow: 0 12px 25px rgba(0,0,0,0.06); cursor: pointer;
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
         .status-none { background: #fff; border: 4px solid var(--gray); color: #000; }
@@ -93,7 +102,6 @@
 
         .copy-text { font-size: 10px; font-weight: 800; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; margin-bottom: 10px; }
 
-        /* 模态框通用样式 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
         .modal-content { background: #fff; width: 90%; max-width: 340px; border-radius: 30px; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
         .modal-h2 { font-size: 18px; font-weight: 900; text-align: center; margin: 0; }
@@ -127,17 +135,17 @@
                 <option value="Cambio">Cambio</option>
             </select>
         </div>
-        <div style="
-            text-align: center; 
-            margin: 10px 0; 
-            padding: 0 15px; 
-            font-size: 11px; 
-            font-weight: 700; 
-            color: var(--orange); 
-            line-height: 1.3;
-            text-transform: uppercase;">
-            ⚠️ Avviso: Chiamare l'attrezzista 15 min prima del cambio modello per verifica attrezzatura.
+
+        <div class="check-area" id="checkWrapper">
+            <div class="check-flex">
+                <input type="checkbox" id="checkPezzi">
+                <label for="checkPezzi" class="check-label">
+                    Ho controllato tutti i pezzi<br>
+                    <span style="font-size: 9px; color: #666; font-weight: 700;">(Posaggi, morse, punzoni)</span>
+                </label>
+            </div>
         </div>
+
         <button id="mainBtn" class="main-btn status-none" onclick="initiateCall()">
             <div id="btnIcon" class="btn-icon">⚡️</div>
             <div id="statusText" class="btn-text">Chiamare Attrezzista</div>
@@ -198,6 +206,8 @@
     const lineaInput = document.getElementById('lineaInput');
     const causaleSelect = document.getElementById('causaleSelect');
     const turnoLabel = document.getElementById('turnoLabel');
+    const checkPezzi = document.getElementById('checkPezzi');
+    const checkWrapper = document.getElementById('checkWrapper');
 
     function handleFeedbackOpen() {
         const now = new Date();
@@ -215,11 +225,9 @@
         const note = document.getElementById('fNote').value;
         if(!nameSelect.value) { alert("Per favore, seleziona un attrezzista!"); return; }
         if(!score || score < 1 || score > 5) { alert("Inserisci un punteggio tra 1 e 5!"); return; }
-        
         const btn = document.getElementById('fSubmitBtn');
         btn.disabled = true; 
         btn.innerText = "Invio...";
-
         db.ref('feedbacks').push({
             attrezzista: nameSelect.value, 
             punteggio: score, 
@@ -270,9 +278,11 @@
                 resetUI();
             } else if (id === savedLinea) {
                 lineaInput.disabled = true; causaleSelect.disabled = true;
-                if (data.status === 'orange') {
+                checkWrapper.style.display = "none"; // 呼叫活动中隐藏勾选框
+                if (data.status === 'orange' || data.status === 'purple') {
                     mainBtn.className = "main-btn status-orange locked";
-                    statusText.innerText = "IN ATTESA..."; btnIcon.innerText = "⏳";
+                    statusText.innerText = (data.status === 'purple') ? "SET-UP IN CORSO..." : "IN ATTESA..."; 
+                    btnIcon.innerText = (data.status === 'purple') ? "🟣" : "⏳";
                     cancelBtn.style.display = "block";
                 } else if (data.status === 'red' || data.status === 'finishing') {
                     mainBtn.className = "main-btn status-red locked";
@@ -288,8 +298,11 @@
         mainBtn.classList.remove('locked'); cancelBtn.style.display = "none";
         lineaInput.disabled = false; causaleSelect.disabled = false;
         causaleSelect.selectedIndex = 0; 
+        checkWrapper.style.display = "block"; // 恢复显示勾选框
+        checkPezzi.checked = false; // 重置勾选状态
     }
 
+    // --- 核心逻辑修改：加入勾选校验 ---
     function initiateCall() {
         const id = lineaInput.value.trim().toLowerCase();
         const causale = causaleSelect.value;
@@ -297,6 +310,14 @@
         const regex = /^[1-5]0[1-8](bis)?$/;
         if(!regex.test(id)) { alert("LINEA ERRATA!"); return; }
         if(!causale) { alert("SELEZIONA UNA CAUSALE!"); return; }
+
+        // 校验勾选框
+        if (!checkPezzi.checked) {
+            alert("ERRORE: Devi confermare di aver controllato tutti i pezzi!");
+            checkWrapper.style.borderColor = "#ff3b30";
+            setTimeout(() => { checkWrapper.style.borderColor = "#fbc02d"; }, 500);
+            return;
+        }
 
         if (causale === "Cambio") {
             document.getElementById('modelloModal').style.display = 'flex';
