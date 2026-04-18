@@ -263,6 +263,7 @@
         function startListening() {
         let id = lineaInput.value.trim().toLowerCase();
         const savedLinea = localStorage.getItem('myActiveCall');
+        const myId = localStorage.getItem('myUniqueDeviceId'); // 获取自己的指纹
         
         if (!id && savedLinea) {
             id = savedLinea.toLowerCase();
@@ -275,30 +276,28 @@
         db.ref('active_calls/' + id).on('value', (snapshot) => {
             const data = snapshot.val();
             
-            // 情况 A：云端没数据，或者任务已标记完成
+            // 核心修复：如果是别人的任务 (senderId 不符)，我这里不进入橙色/红色锁定状态
+            if (data && data.status !== 'completed' && data.senderId !== myId) {
+                resetUI();
+                statusText.innerText = "LINEA " + id.toUpperCase() + " GIÀ ATTIVA"; 
+                return;
+            }
+
             if (!data || data.status === 'completed') {
                 if (id === localStorage.getItem('myActiveCall')) { 
                     localStorage.removeItem('myActiveCall'); 
                     resetUI();
                 } else {
-                    resetUI(); // 如果只是路过查一下，发现没任务也要重置UI
+                    resetUI(); 
                 }
-            } 
-            // 情况 B：云端有活跃任务
-            else {
-                // 判断：这个任务是不是我这台手机发起的？
+            } else {
                 const isMyTask = (id === localStorage.getItem('myActiveCall'));
-
-                // 统一锁定选择框，防止在任务中改原因
                 causaleSelect.disabled = true;
 
                 if (data.status === 'orange' || data.status === 'purple') {
                     mainBtn.className = "main-btn status-orange locked";
-                    // 如果是别人的任务，提示“线号已激活”；如果是自己的，提示“等待中”
                     statusText.innerText = isMyTask ? "IN ATTESA..." : "LINEA " + id.toUpperCase() + " GIÀ ATTIVA";
                     btnIcon.innerText = "⏳";
-                    
-                    // 只有主人能看到取消按钮，且只有主人会被锁死输入框
                     cancelBtn.style.display = isMyTask ? "block" : "none";
                     lineaInput.disabled = isMyTask; 
 
@@ -312,8 +311,6 @@
             }
         });
     }
-
-
 
     function resetUI() {
         mainBtn.className = "main-btn status-none"; statusText.innerText = "Chiamare Attrezzista"; btnIcon.innerText = "⚡️";
@@ -366,17 +363,29 @@
         document.getElementById('modelloModal').style.display = 'none';
         resetUI();
     }
-
-    function sendCall(finalCausale) {
+        function sendCall(finalCausale) {
         const id = lineaInput.value.trim().toLowerCase();
+        
+        // 生成手机指纹，确保唯一性
+        let myId = localStorage.getItem('myUniqueDeviceId');
+        if(!myId) { 
+            myId = 'DEV_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('myUniqueDeviceId', myId);
+        }
+
         db.ref('active_calls/' + id).once('value').then((snapshot) => {
             if (snapshot.exists() && snapshot.val().status !== 'completed') {
                 alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già attiva!"); return; 
             }
             db.ref('active_calls/' + id).set({
-                startA: Date.now(), status: 'orange', causale: finalCausale, turno: getActiveTurno()
+                startA: Date.now(), 
+                status: 'orange', 
+                causale: finalCausale, 
+                turno: getActiveTurno(),
+                senderId: myId // 记录是谁叫的
             }).then(() => {
-                localStorage.setItem('myActiveCall', id); startListening();
+                localStorage.setItem('myActiveCall', id); 
+                startListening();
                 const tKey = getActiveTurno().replace(" ", "_");
                 db.ref('tokens/' + tKey).once('value', (snap) => {
                     const tokens = snap.val() || {};
@@ -409,7 +418,7 @@
                 endT: now,   // 强制让结束时间等于现在
                 status: 'completed',
                 causale: "ANNULLATO DA LINEA",
-                techName: "CLIENTE", // 标记是客户端自己取消的
+                techName: "-", // 标记是客户端自己取消的
                 turno: getActiveTurno()
             };
 
