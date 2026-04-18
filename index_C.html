@@ -11,7 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        :root { --bg: #f2f2f7; --red: #ff3b30; --orange: #ff9500; --black: #000000; --white: #ffffff; --text-main: #1c1c1e; --text-sec: #8e8e93; --blue: #007aff; }
+        :root { --bg: #f2f2f7; --red: #ff3b30; --orange: #ff9500; --black: #000000; --white: #ffffff; --text-main: #1c1c1e; --text-sec: #8e8e93; --blue: #007aff; --purple: #af52de; }
         * { box-sizing: border-box; -webkit-user-select: none; user-select: none; }
         
         body { 
@@ -42,8 +42,12 @@
         }
         .card.st-waiting { border-color: var(--orange); }
         .card.st-working { border-color: var(--red); }
+        /* 新增紫色卡片样式 */
+        .card.st-prep { border-color: var(--purple); animation: purplePulse 2s infinite; }
         .card.st-completed { border-color: var(--black); }
         
+        @keyframes purplePulse { 0% { box-shadow: 0 0 5px var(--purple); } 50% { box-shadow: 0 0 15px var(--purple); } 100% { box-shadow: 0 0 5px var(--purple); } }
+
         .card.st-annullato { 
             min-height: 55px !important; 
             background: #e5e5ea !important; 
@@ -57,6 +61,7 @@
         .card-badge { font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 5px; text-transform: uppercase; color: #fff; letter-spacing: 0.3px; white-space: nowrap; }
         .bg-orange { background-color: var(--orange); }
         .bg-red { background-color: var(--red); }
+        .bg-purple { background-color: var(--purple); }
         .bg-black { background-color: var(--black); }
 
         .card-linea { font-size: 22px; font-weight: 700; color: var(--text-main); line-height: 1; margin-left: 2px; }
@@ -279,7 +284,7 @@
         const date = new Date(ts);
         const hour = date.getHours() + (date.getMinutes() / 60);
         const baseDate = new Date(2025, 11, 29); 
-        const totalWeeks = Math.floor((date - baseDate) / (7*24*60*60*1000)) + 1;
+        const totalWeeks = Math.floor((date.getTime() - baseDate.getTime()) / (7*24*60*60*1000)) + 1;
         const isSingleWeek = totalWeeks % 2 !== 0; 
         const isAfternoon = (hour >= 14.25); 
         return isSingleWeek ? (isAfternoon ? "Turno A" : "Turno B") : (isAfternoon ? "Turno B" : "Turno A");
@@ -357,7 +362,8 @@
         Object.keys(cloudData).filter(id => {
             const item = cloudData[id];
             const tDay = new Date(item.startA).toLocaleDateString('it-IT');
-            return tDay === todayStr && (item.turno || calculateTurnoByTimestamp(item.startA)) === currentTurno && !item.hideFromBoard;
+            return tDay === todayStr && (item.turno || calculateTurnoByTimestamp(item.startA)) === currentTurno && !item.hideFromBoard &&
+                   (item.status === 'orange' || item.status === 'red' || item.status === 'purple');
         }).forEach(id => {
             const item = cloudData[id];
             uniqueItemsMap.set(item.startA, { id: id, ...item, isLocal: false, sortTime: (item.status === 'orange') ? item.startA : (item.startB || item.startD || item.startA), startTimeStr: new Date(item.startA).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
@@ -385,13 +391,14 @@
             if (item.isLocal) { waitMin = item.tA; workMin = item.tD; }
             else {
                 const sd = item.startB || item.startD || null; 
-                if (item.status === 'orange') { waitMin = Math.round((now - item.startA) / 60000); workMin = 0; }
+                if (item.status === 'orange' || item.status === 'purple') { waitMin = Math.round((now - item.startA) / 60000); workMin = 0; }
                 else if (item.status === 'completed') { let et = item.endT || now; let realSd = sd || item.startA; waitMin = Math.round((realSd - item.startA) / 60000); workMin = Math.round((et - realSd) / 60000); }
                 else { let realSd = sd || now; waitMin = Math.round((realSd - item.startA) / 60000); workMin = Math.round((now - realSd) / 60000); }
             }
 
             let statusL, colorC, statusK;
             if(item.status === 'orange') { statusL = 'ATTESA'; colorC = 'orange'; statusK = 'waiting'; }
+            else if(item.status === 'purple') { statusL = 'CONTROLLO ATTREZZI'; colorC = 'purple'; statusK = 'prep'; }
             else if(item.status === 'red' || item.status === 'finishing') { statusL = 'LAVORO'; colorC = 'red'; statusK = 'working'; }
             else { statusL = 'FINE'; colorC = 'black'; statusK = 'completed'; }
             
