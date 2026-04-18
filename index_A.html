@@ -260,30 +260,53 @@
     }
     updateShift(); setInterval(updateShift, 10000);
 
-    function startListening() {
-        const id = lineaInput.value.trim().toLowerCase();
+        function startListening() {
+        // 1. 获取当前输入框的线路
+        let id = lineaInput.value.trim().toLowerCase();
+        
+        // 2. 如果输入框是空的，尝试从本地缓存恢复线路号
+        const savedLinea = localStorage.getItem('myActiveCall');
+        if (!id && savedLinea) {
+            id = savedLinea.toLowerCase();
+            lineaInput.value = id.toUpperCase();
+        }
+        
         if(!id) return;
-        const savedLinea = localStorage.getItem('myActiveCall'); 
+
+        // 3. 断开之前的监听，开启新监听
         db.ref('active_calls/' + id).off();
         db.ref('active_calls/' + id).on('value', (snapshot) => {
             const data = snapshot.val();
+            
+            // 情况 A：云端没数据，或者任务已标记完成
             if (!data || data.status === 'completed') {
-                if (id === savedLinea) { localStorage.removeItem('myActiveCall'); }
-                resetUI();
-            } else if (id === savedLinea) {
-                lineaInput.disabled = true; causaleSelect.disabled = true;
-                if (data.status === 'orange') {
+                if (id === localStorage.getItem('myActiveCall')) { 
+                    localStorage.removeItem('myActiveCall'); 
+                    resetUI();
+                }
+            } 
+            // 情况 B：云端有活跃任务
+            else {
+                // 只要云端有此线路的任务，就强制锁定 UI（解决重启变回闪电按钮的问题）
+                localStorage.setItem('myActiveCall', id); 
+                lineaInput.disabled = true; 
+                causaleSelect.disabled = true;
+                
+                if (data.status === 'orange' || data.status === 'purple') {
                     mainBtn.className = "main-btn status-orange locked";
-                    statusText.innerText = "IN ATTESA..."; btnIcon.innerText = "⏳";
+                    statusText.innerText = "IN ATTESA..."; 
+                    btnIcon.innerText = "⏳";
                     cancelBtn.style.display = "block";
                 } else if (data.status === 'red' || data.status === 'finishing') {
                     mainBtn.className = "main-btn status-red locked";
-                    statusText.innerText = "INTERVENTO IN CORSO..."; btnIcon.innerText = "⚙️";
+                    statusText.innerText = "INTERVENTO IN CORSO..."; 
+                    btnIcon.innerText = "⚙️";
                     cancelBtn.style.display = "none";
                 }
-            } else { resetUI(); }
+            }
         });
     }
+
 
     function resetUI() {
         mainBtn.className = "main-btn status-none"; statusText.innerText = "Chiamare Attrezzista"; btnIcon.innerText = "⚡️";
