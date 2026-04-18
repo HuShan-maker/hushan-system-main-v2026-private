@@ -136,15 +136,7 @@
                 <option value="Cambio">Cambio</option>
             </select>
         </div>
-        <div style="
-            text-align: center; 
-            margin: 10px 0; 
-            padding: 0 15px; 
-            font-size: 11px; 
-            font-weight: 700; 
-            color: var(--orange); 
-            line-height: 1.3;
-            text-transform: uppercase;">
+        <div style="text-align: center; margin: 10px 0; padding: 0 15px; font-size: 11px; font-weight: 700; color: var(--orange); line-height: 1.3; text-transform: uppercase;">
             ⚠️ Avviso: Chiamare l'attrezzista 15 min prima del cambio modello per verifica attrezzatura.
         </div>
         <button id="mainBtn" class="main-btn status-none" onclick="initiateCall()">
@@ -167,7 +159,7 @@
             <div class="check-area-modal" id="checkWrapperModal">
                 <div class="check-flex-modal">
                     <input type="checkbox" id="checkPezziModal">
-                    <label for="checkPezziModal" class="check-label-modal">
+                    <label for="checkPezziModal" class="modal-check-label">
                         Ho controllato tutti i pezzi<br>
                         <span style="font-size: 9px; color: #666; font-weight: 700;">(Posaggi, morse, punzoni)</span>
                     </label>
@@ -240,22 +232,13 @@
         btn.disabled = true; btn.innerText = "Invio...";
 
         db.ref('feedbacks').push({
-            attrezzista: nameSelect.value, 
-            punteggio: score, 
-            messaggio: note,
-            timestamp: Date.now(), 
-            linea: lineaInput.value || "N/A", 
-            data: new Date().toLocaleDateString('it-IT'),
-            turno: getActiveTurno() 
+            attrezzista: nameSelect.value, punteggio: score, messaggio: note,
+            timestamp: Date.now(), linea: lineaInput.value || "N/A", 
+            data: new Date().toLocaleDateString('it-IT'), turno: getActiveTurno() 
         }).then(() => {
             alert("Feedback inviato!");
             document.getElementById('fModal').style.display = 'none';
-            nameSelect.selectedIndex = 0; 
-            document.getElementById('fScore').value = ""; 
-            document.getElementById('fNote').value = "";
-            btn.disabled = false; btn.innerText = "INVIA FEEDBACK";
-        }).catch(err => {
-            alert("ERRORE: " + err.message);
+            nameSelect.selectedIndex = 0; document.getElementById('fScore').value = ""; document.getElementById('fNote').value = "";
             btn.disabled = false; btn.innerText = "INVIA FEEDBACK";
         });
     }
@@ -329,34 +312,25 @@
     function confirmModello() {
         const modello = document.getElementById('modelloInput').value.trim();
         const isChecked = document.getElementById('checkPezziModal').checked;
-        
         if (!modello) { alert("INSERIRE MODELLO!"); return; }
         if (!isChecked) {
             alert("DEVI CONFERMARE DI AVER CONTROLLATO TUTTI I PEZZI!");
-            document.getElementById('checkWrapperModal').style.borderColor = var(--red);
+            document.getElementById('checkWrapperModal').style.borderColor = "#ff3b30";
             setTimeout(() => { document.getElementById('checkWrapperModal').style.borderColor = "#fbc02d"; }, 500);
             return;
         }
-
-        const fullCausale = "Cambio " + modello.toUpperCase();
+        sendCall("Cambio " + modello.toUpperCase());
         document.getElementById('modelloModal').style.display = 'none';
         document.getElementById('modelloInput').value = "";
-        sendCall(fullCausale);
     }
 
-    // 弹窗取消逻辑
     function cancelModelloModal() {
         const id = lineaInput.value.trim().toLowerCase();
         if(id) {
             const now = Date.now();
             const dateKey = new Date().toISOString().split('T')[0];
-            // 归档为 annullato da linea
             db.ref(`history/${dateKey}/${id}_${now}`).set({
-                linea: id.toUpperCase(),
-                causale: "ANNULLATO DA LINEA",
-                status: 'completed',
-                timestamp: now,
-                turno: getActiveTurno()
+                linea: id.toUpperCase(), causale: "ANNULLATO DA LINEA", status: 'completed', timestamp: now, turno: getActiveTurno()
             });
         }
         document.getElementById('modelloModal').style.display = 'none';
@@ -369,12 +343,11 @@
             if (snapshot.exists() && snapshot.val().status !== 'completed') {
                 alert("ATTENZIONE: Linea " + id.toUpperCase() + " è già attiva!"); return; 
             }
-            const currentTurno = getActiveTurno();
             db.ref('active_calls/' + id).set({
-                startA: Date.now(), status: 'orange', causale: finalCausale, turno: currentTurno
+                startA: Date.now(), status: 'orange', causale: finalCausale, turno: getActiveTurno()
             }).then(() => {
                 localStorage.setItem('myActiveCall', id); startListening();
-                const tKey = currentTurno.replace(" ", "_");
+                const tKey = getActiveTurno().replace(" ", "_");
                 db.ref('tokens/' + tKey).once('value', (snap) => {
                     const tokens = snap.val() || {};
                     Object.values(tokens).forEach(t => {
@@ -394,12 +367,8 @@
         const dateKey = new Date().toISOString().split('T')[0];
         db.ref('active_calls/' + id).once('value').then(snap => {
             const data = snap.val();
-            // 归档统一修改为 ANNULLATO DA LINEA
             db.ref(`history/${dateKey}/${id}_${now}`).set({
-                ...(data || {}), 
-                status: 'completed', 
-                endT: now, 
-                causale: "ANNULLATO DA LINEA"
+                ...(data || {}), status: 'completed', endT: now, causale: "ANNULLATO DA LINEA"
             });
             db.ref('active_calls/' + id).remove().then(() => { 
                 localStorage.removeItem('myActiveCall'); resetUI(); 
