@@ -59,14 +59,14 @@
             cursor: pointer; text-align-last: center; -webkit-appearance: none;
         }
 
-        /* 强制校验区域样式 */
-        .check-area {
-            margin: 5px 0; padding: 12px; background: #fff9c4; border-radius: 20px; 
-            width: 100%; border: 3px solid #fbc02d; transition: border-color 0.3s;
+        /* 弹窗内的校验区域 */
+        .modal-check-area {
+            margin: 10px 0; padding: 12px; background: #fff9c4; border-radius: 15px; 
+            border: 2px solid #fbc02d; text-align: left;
         }
-        .check-flex { display: flex; align-items: center; gap: 12px; }
-        #checkPezzi { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--black); }
-        .check-label { font-weight: 800; color: #000; font-size: 13px; line-height: 1.2; text-transform: uppercase; }
+        .modal-check-flex { display: flex; align-items: center; gap: 10px; }
+        #checkPezziModal { width: 20px; height: 20px; accent-color: #000; }
+        .modal-check-label { font-weight: 800; color: #000; font-size: 12px; line-height: 1.2; text-transform: uppercase; }
 
         .main-btn {
             width: 250px; height: 250px; border-radius: 55px; 
@@ -136,16 +136,6 @@
             </select>
         </div>
 
-        <div class="check-area" id="checkWrapper">
-            <div class="check-flex">
-                <input type="checkbox" id="checkPezzi">
-                <label for="checkPezzi" class="check-label">
-                    Ho controllato tutti i pezzi<br>
-                    <span style="font-size: 9px; color: #666; font-weight: 700;">(Posaggi, morse, punzoni)</span>
-                </label>
-            </div>
-        </div>
-
         <button id="mainBtn" class="main-btn status-none" onclick="initiateCall()">
             <div id="btnIcon" class="btn-icon">⚡️</div>
             <div id="statusText" class="btn-text">Chiamare Attrezzista</div>
@@ -162,6 +152,17 @@
             <h2 class="modal-h2">Cambio Modello</h2>
             <div class="f-label">Inserisci Modello</div>
             <input type="text" id="modelloInput" class="f-input" placeholder="" autocomplete="off">
+            
+            <div class="modal-check-area" id="modalCheckWrapper">
+                <div class="modal-check-flex">
+                    <input type="checkbox" id="checkPezziModal">
+                    <label for="checkPezziModal" class="modal-check-label">
+                        HO CONTROLLATO TUTTI I PEZZI<br>
+                        <span style="font-size: 9px; color: #666; font-weight: 700;">(POSAGGI, MORSE, PUNZONI)</span>
+                    </label>
+                </div>
+            </div>
+
             <button class="f-submit" onclick="confirmModello()">CONFERMA E CHIAMA</button>
             <div class="f-close" onclick="document.getElementById('modelloModal').style.display='none'">ANNULLA</div>
         </div>
@@ -206,8 +207,6 @@
     const lineaInput = document.getElementById('lineaInput');
     const causaleSelect = document.getElementById('causaleSelect');
     const turnoLabel = document.getElementById('turnoLabel');
-    const checkPezzi = document.getElementById('checkPezzi');
-    const checkWrapper = document.getElementById('checkWrapper');
 
     function handleFeedbackOpen() {
         const now = new Date();
@@ -278,7 +277,6 @@
                 resetUI();
             } else if (id === savedLinea) {
                 lineaInput.disabled = true; causaleSelect.disabled = true;
-                checkWrapper.style.display = "none"; // 呼叫活动中隐藏勾选框
                 if (data.status === 'orange' || data.status === 'purple') {
                     mainBtn.className = "main-btn status-orange locked";
                     statusText.innerText = (data.status === 'purple') ? "SET-UP IN CORSO..." : "IN ATTESA..."; 
@@ -298,11 +296,10 @@
         mainBtn.classList.remove('locked'); cancelBtn.style.display = "none";
         lineaInput.disabled = false; causaleSelect.disabled = false;
         causaleSelect.selectedIndex = 0; 
-        checkWrapper.style.display = "block"; // 恢复显示勾选框
-        checkPezzi.checked = false; // 重置勾选状态
+        // 重置弹窗里的勾选框
+        document.getElementById('checkPezziModal').checked = false;
     }
 
-    // --- 核心逻辑修改：加入勾选校验 ---
     function initiateCall() {
         const id = lineaInput.value.trim().toLowerCase();
         const causale = causaleSelect.value;
@@ -310,14 +307,6 @@
         const regex = /^[1-5]0[1-8](bis)?$/;
         if(!regex.test(id)) { alert("LINEA ERRATA!"); return; }
         if(!causale) { alert("SELEZIONA UNA CAUSALE!"); return; }
-
-        // 校验勾选框
-        if (!checkPezzi.checked) {
-            alert("ERRORE: Devi confermare di aver controllato tutti i pezzi!");
-            checkWrapper.style.borderColor = "#ff3b30";
-            setTimeout(() => { checkWrapper.style.borderColor = "#fbc02d"; }, 500);
-            return;
-        }
 
         if (causale === "Cambio") {
             document.getElementById('modelloModal').style.display = 'flex';
@@ -327,9 +316,21 @@
         }
     }
 
+    // 核心修改逻辑：只有勾选了才能确认发送
     function confirmModello() {
         const modello = document.getElementById('modelloInput').value.trim();
+        const isChecked = document.getElementById('checkPezziModal').checked;
+
         if (!modello) { alert("INSERIRE MODELLO!"); return; }
+        
+        // 强制校验勾选框
+        if (!isChecked) {
+            alert("ERRORE: Devi confermare di aver controllato tutti i pezzi!");
+            document.getElementById('modalCheckWrapper').style.borderColor = "#ff3b30";
+            setTimeout(() => { document.getElementById('modalCheckWrapper').style.borderColor = "#fbc02d"; }, 500);
+            return;
+        }
+
         const fullCausale = "Cambio " + modello.toUpperCase();
         document.getElementById('modelloModal').style.display = 'none';
         document.getElementById('modelloInput').value = "";
