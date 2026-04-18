@@ -261,11 +261,9 @@
     updateShift(); setInterval(updateShift, 10000);
 
         function startListening() {
-        // 1. 获取当前输入框的线路
         let id = lineaInput.value.trim().toLowerCase();
-        
-        // 2. 如果输入框是空的，尝试从本地缓存恢复线路号
         const savedLinea = localStorage.getItem('myActiveCall');
+        
         if (!id && savedLinea) {
             id = savedLinea.toLowerCase();
             lineaInput.value = id.toUpperCase();
@@ -273,7 +271,6 @@
         
         if(!id) return;
 
-        // 3. 断开之前的监听，开启新监听
         db.ref('active_calls/' + id).off();
         db.ref('active_calls/' + id).on('value', (snapshot) => {
             const data = snapshot.val();
@@ -283,29 +280,39 @@
                 if (id === localStorage.getItem('myActiveCall')) { 
                     localStorage.removeItem('myActiveCall'); 
                     resetUI();
+                } else {
+                    resetUI(); // 如果只是路过查一下，发现没任务也要重置UI
                 }
             } 
             // 情况 B：云端有活跃任务
             else {
-                // 只要云端有此线路的任务，就强制锁定 UI（解决重启变回闪电按钮的问题）
-                localStorage.setItem('myActiveCall', id); 
-                lineaInput.disabled = true; 
+                // 判断：这个任务是不是我这台手机发起的？
+                const isMyTask = (id === localStorage.getItem('myActiveCall'));
+
+                // 统一锁定选择框，防止在任务中改原因
                 causaleSelect.disabled = true;
-                
+
                 if (data.status === 'orange' || data.status === 'purple') {
                     mainBtn.className = "main-btn status-orange locked";
-                    statusText.innerText = "IN ATTESA..."; 
+                    // 如果是别人的任务，提示“线号已激活”；如果是自己的，提示“等待中”
+                    statusText.innerText = isMyTask ? "IN ATTESA..." : "LINEA " + id.toUpperCase() + " GIÀ ATTIVA";
                     btnIcon.innerText = "⏳";
-                    cancelBtn.style.display = "block";
+                    
+                    // 只有主人能看到取消按钮，且只有主人会被锁死输入框
+                    cancelBtn.style.display = isMyTask ? "block" : "none";
+                    lineaInput.disabled = isMyTask; 
+
                 } else if (data.status === 'red' || data.status === 'finishing') {
                     mainBtn.className = "main-btn status-red locked";
                     statusText.innerText = "INTERVENTO IN CORSO..."; 
                     btnIcon.innerText = "⚙️";
                     cancelBtn.style.display = "none";
+                    lineaInput.disabled = isMyTask;
                 }
             }
         });
     }
+
 
 
     function resetUI() {
