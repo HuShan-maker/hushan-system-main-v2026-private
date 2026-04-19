@@ -59,7 +59,6 @@
             cursor: pointer; text-align-last: center; -webkit-appearance: none;
         }
 
-        /* 模态框内部检查框样式 */
         .check-area-modal {
             margin: 10px 0; padding: 12px; background: #fff9c4; border-radius: 20px; 
             width: 100%; border: 3px solid #fbc02d; transition: border-color 0.3s;
@@ -84,8 +83,22 @@
 
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.98); } 100% { transform: scale(1); } }
 
-        .btn-icon { font-size: 60px; margin-bottom: 10px; }
-        .btn-text { font-size: 15px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 25px; line-height: 1.2; }
+        .btn-icon { font-size: 60px; margin-bottom: 10px; transition: all 0.3s; }
+        .btn-text { font-size: 15px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 0 25px; line-height: 1.2; transition: all 0.3s; }
+
+        /* 新增：指南容器样式 */
+        #sopContainer {
+            display: none;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.95);
+            margin-top: 12px;
+            line-height: 1.35;
+            padding: 0 20px;
+            white-space: pre-line;
+            text-align: left;
+            width: 100%;
+        }
 
         #cancelBtn {
             margin-top: 15px; background: #fff; border: 2px solid #e5e5ea;
@@ -142,6 +155,7 @@
         <button id="mainBtn" class="main-btn status-none" onclick="initiateCall()">
             <div id="btnIcon" class="btn-icon">⚡️</div>
             <div id="statusText" class="btn-text">Chiamare Attrezzista</div>
+            <div id="sopContainer"></div>
         </button>
         <button id="cancelBtn" onclick="cancelCall()">Annulla Chiamata</button>
     </div>
@@ -210,6 +224,18 @@
     const lineaInput = document.getElementById('lineaInput');
     const causaleSelect = document.getElementById('causaleSelect');
     const turnoLabel = document.getElementById('turnoLabel');
+    const sopBox = document.getElementById('sopContainer');
+
+    // --- 维修指南词典 ---
+    const SOP_GUIDE = {
+        "Faro": "• Macchina bloccata: premi emergenza 15s, poi tasti M+E per azzerare e premi START.\n• Verifica se lama o fresa sono rotte.",
+        "SGM Taglio": "• Se non parte: verifica pulsante emergenza e chiusura porte.\n• Controlla che le lame siano integre.",
+        "Avvitatore": "• Controlla se la punta è rotta.\n• Non aspira? Regola posizione tazza con le rotelline.",
+        "Lecureux": "• Pulisci le campane.\n• Verifica cavo alimentazione inserito bene.\n• Controlla misura cappuccio e vite.",
+        "Stampiglia": "• Verifica densità colore.\n• Cambia tampone, cliché o colore se necessario.",
+        "Oliatore": "• Verifica livello olio.\n• Spurgare bolle d'aria.\n• Pulisci ago erogatore.",
+        "Cambio": "• Prepara nuovo programma CNC.\n• Verifica vassoio componenti.\n• Pulisci bene la morsa."
+    };
 
     function handleFeedbackOpen() {
         const now = new Date();
@@ -276,7 +302,6 @@
         db.ref('active_calls/' + id).on('value', (snapshot) => {
             const data = snapshot.val();
             
-            // 只要不是我发起的任务，或者任务结束，按钮彻底复原（白色）
             if (!data || data.status === 'completed' || data.senderId !== myId) {
                 if (id === localStorage.getItem('myActiveCall') && (!data || data.status === 'completed')) { 
                     localStorage.removeItem('myActiveCall'); 
@@ -287,15 +312,23 @@
                 const isCambio = data.causale && data.causale.includes("Cambio");
                 causaleSelect.disabled = true;
 
-                // 如果是 Cambio，显示紫色/橙色等待逻辑
                 if (isCambio && (data.status === 'orange' || data.status === 'purple')) {
                     mainBtn.className = "main-btn status-orange locked";
                     statusText.innerText = "IN ATTESA...";
                     btnIcon.innerText = "⏳";
                     cancelBtn.style.display = "block";
                     lineaInput.disabled = true;
+
+                    // 排版变形
+                    btnIcon.style.fontSize = "40px";
+                    btnIcon.style.marginTop = "-15px";
+                    statusText.style.fontSize = "13px";
+
+                    // 显示指南
+                    sopBox.style.display = "block";
+                    sopBox.innerText = SOP_GUIDE["Cambio"];
+
                 } 
-                // 如果是普通维修，或者是已经变红的工作
                 else if (data.status === 'red' || data.status === 'finishing' || (!isCambio && data.status === 'orange')) {
                     const isRed = (data.status === 'red' || data.status === 'finishing');
                     mainBtn.className = isRed ? "main-btn status-red locked" : "main-btn status-orange locked";
@@ -303,6 +336,30 @@
                     btnIcon.innerText = isRed ? "⚙️" : "⏳";
                     cancelBtn.style.display = isRed ? "none" : "block";
                     lineaInput.disabled = true;
+
+                    if (!isRed) {
+                        // 橙色阶段排版变形
+                        btnIcon.style.fontSize = "40px";
+                        btnIcon.style.marginTop = "-15px";
+                        statusText.style.fontSize = "13px";
+
+                        // 匹配指南内容
+                        sopBox.style.display = "block";
+                        let match = "Guida non disponibile";
+                        for (let key in SOP_GUIDE) {
+                            if (data.causale.includes(key)) {
+                                match = SOP_GUIDE[key];
+                                break;
+                            }
+                        }
+                        sopBox.innerText = match;
+                    } else {
+                        // 红色阶段隐藏指南
+                        sopBox.style.display = "none";
+                        btnIcon.style.fontSize = "55px";
+                        btnIcon.style.marginTop = "0";
+                        statusText.style.fontSize = "15px";
+                    }
                 }
             }
         });
@@ -314,6 +371,12 @@
         lineaInput.disabled = false; causaleSelect.disabled = false;
         causaleSelect.selectedIndex = 0; 
         document.getElementById('checkPezziModal').checked = false;
+        
+        // 恢复原始排版
+        sopBox.style.display = "none";
+        btnIcon.style.fontSize = "60px";
+        btnIcon.style.marginTop = "0";
+        statusText.style.fontSize = "15px";
     }
 
     function initiateCall() {
@@ -362,7 +425,6 @@
         function sendCall(finalCausale) {
         const id = lineaInput.value.trim().toLowerCase();
         
-        // 生成手机指纹，确保唯一性
         let myId = localStorage.getItem('myUniqueDeviceId');
         if(!myId) { 
             myId = 'DEV_' + Math.random().toString(36).substr(2, 9);
@@ -378,7 +440,7 @@
                 status: 'orange', 
                 causale: finalCausale, 
                 turno: getActiveTurno(),
-                senderId: myId // 记录是谁叫的
+                senderId: myId
             }).then(() => {
                 localStorage.setItem('myActiveCall', id); 
                 startListening();
@@ -404,23 +466,20 @@
         
         db.ref('active_calls/' + id).once('value').then(snap => {
             const data = snap.val();
-            if (!data) return; // 如果数据已经没了，直接退出
+            if (!data) return;
 
-            // --- 核心修复：手动构造一个完整的归档数据 ---
             const archiveData = {
                 id: id.toUpperCase(),
                 startA: data.startA || now,
-                startB: now, // 强制让 B 时间等于现在，防止 C 端计算出错
-                endT: now,   // 强制让结束时间等于现在
+                startB: now, 
+                endT: now,   
                 status: 'completed',
                 causale: "ANNULLATO DA LINEA",
-                techName: "-", // 标记是客户端自己取消的
+                techName: "-", 
                 turno: getActiveTurno()
             };
 
-            // 1. 先存入历史记录
             db.ref(`history/${dateKey}/${id}_${now}`).set(archiveData).then(() => {
-                // 2. 存入成功后，再删除实时呼叫
                 db.ref('active_calls/' + id).remove().then(() => { 
                     localStorage.removeItem('myActiveCall'); 
                     resetUI(); 
@@ -428,7 +487,6 @@
             });
         });
     }
-
 
     document.getElementById('curYear').innerText = new Date().getFullYear();
     const pLinea = localStorage.getItem('persistentLinea');
