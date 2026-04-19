@@ -782,6 +782,7 @@ function toggleFuori() {
             takenBy: myDeviceId, 
             techName: currentUserName 
         };
+        localStorage.setItem('local_fuori_status', JSON.stringify(act['FUORI']));
         renderGrid();
     }
 }
