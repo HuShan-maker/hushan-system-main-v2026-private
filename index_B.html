@@ -776,9 +776,8 @@
             document.getElementById('fuoriModal').style.display = 'flex';
             setTimeout(() => document.getElementById('fuoriCausaleInput').focus(), 150);
         } else if (!fs || fs.status === 'completed') {
-            db.ref('active_calls/FUORI').set({ 
-                status: 'red', startA: sTime, startB: sTime, takenBy: myDeviceId, techName: currentUserName,
-                turno: getRealTimeTurno() 
+        act['FUORI'] = { status: 'red', takenBy: myDeviceId };
+        renderGrid();
             });
         }
     }
@@ -787,8 +786,7 @@
         const val = document.getElementById('fuoriCausaleInput').value.trim() || "Attività Extra";
         const fs = act['FUORI']; 
         const now = Date.now() + serverTimeOffset;
-        archiveIntervention('FUORI', val, fs.startA, fs.startB || fs.startA, now, currentUserName);
-        db.ref('active_calls/FUORI').remove();
+        act['FUORI'].status = 'completed';
         document.getElementById('fuoriCausaleInput').value = "";
         document.getElementById('fuoriModal').style.display = 'none';
         renderGrid();
