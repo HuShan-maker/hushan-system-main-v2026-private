@@ -253,15 +253,6 @@
                         if(!keepDaysHistory.includes(d)) db.ref(`history/${d}`).remove(); 
                     }); 
                 });
-                
-                // 清理 feedbacks 节点：现在保留 30 天
-                db.ref('feedbacks').once('value').then(snap => { 
-                    const all = snap.val(); 
-                    if(all) Object.keys(all).forEach(k => { 
-                        // 核心：使用 30 天的白名单进行比对
-                        if(!keepDaysFeedbacks.includes(all[k].data)) db.ref(`feedbacks/${k}`).remove(); 
-                    }); 
-                });
             }
         });
     }
