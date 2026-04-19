@@ -735,13 +735,14 @@
             const item = act[id];
             const now = Date.now() + serverTimeOffset;
             if (id !== 'FUORI') {
+                // 只有不是 FUORI 的时候，才执行归档（发给C端）和更新数据库
                 archiveIntervention(id, item.causale || "-", item.startA, item.startB || item.startA, now, currentUserName);
                 db.ref('active_calls/' + id).update({ status: 'completed', endT: sTime });
             } else {
+                // 如果是 FUORI，只改本地状态，不去触发 archiveIntervention，也不发给 Firebase
                 act['FUORI'].status = 'completed';
-                renderMachines();
+                renderMachines(); 
             }
-
             }
         }
     }
