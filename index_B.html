@@ -672,21 +672,42 @@
         if(type === 'crea') newData.creator = currentUserName;
         await db.ref(`modelli_db/${id}/current`).set(newData);
         alert("Salvato correttamente!");
-        let changesText = "";
-        if (typeof diffObj !== 'undefined' && diffObj) {
-            changesText = "\n🔄 *MODIFICHE:*";
-            for (let key in diffObj) {
-                changesText += `\n- ${key.toUpperCase()}: _${diffObj[key].old}_ ➔ *${diffObj[key].new}*`;
+            // 2. 计算对比差异
+    let changesText = "";
+    if (type === 'aggiorna') {
+        if (typeof currentModData !== 'undefined' && currentModData) {
+            const keys = ["macchina", "posaggio", "lama", "panto", "scarico", "quota", "note"];
+            let hasChanged = false;
+            keys.forEach(k => {
+                const oldVal = currentModData[k] ? String(currentModData[k]).trim() : "-";
+                const newVal = newData[k] ? String(newData[k]).trim() : "-";
+                if (newVal !== oldVal) {
+                    hasChanged = true;
+                    changesText += `\n• ${k.toUpperCase()}: _${oldVal}_ ➔ *${newVal}*`;
+                }
+            });
+            if (hasChanged) {
+                changesText = `\n🔄 *MODIFICHE:*${changesText}`;
+            } else {
+                changesText = `\n✅ *Nessuna modifica ai parametri.*`;
             }
         }
-        
-        const myPhone = "393662613686";
-        const waText = encodeURIComponent(
-            ` 💻 *DB-MODELLI UPDATE* ⚙️ \n` +
-            `📍 *Modello:* ${id}\n` +
-            `👤 *User:* ${currentUserName}` + 
-            `${changesText}\n` +
-            `📝 *Note:* ${newData.note || '-'}`
+    } else {
+        // --- 如果是新建 (Crea)，只显示这一行简洁的提示 ---
+        changesText = `\n✨ *Nuovo Modello Creato nel DB*`;
+    }
+
+    // 3. 准备 WhatsApp 最终信息
+    const myPhone = "393662613686"; 
+    const waMessage = 
+        `💻 *DB-MODELLI UPDATE* ⚙️\n` + 
+        `--------------------------\n` +
+        `📍 *Modello:* ${id}\n` +
+        `👤 *User:* ${currentUserName}\n` +
+        `--------------------------` +
+        `${changesText}\n` + // 这里现在只会包含修改项或新建提示
+        `--------------------------\n` +
+        `📝 *Note:* ${newData.note || '-'}`;
         );
         window.location.href = `https://wa.me/${myPhone}?text=${waText}`;
         mEditMode = null;
