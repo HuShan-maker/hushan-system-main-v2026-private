@@ -672,6 +672,22 @@
         if(type === 'crea') newData.creator = currentUserName;
         await db.ref(`modelli_db/${id}/current`).set(newData);
         alert("Salvato correttamente!");
+        // --- WhatsApp 极简通知开始 ---
+const myPhone = "393662613686"; // 这里改成你自己的手机号，记得带 39，不要加 +
+const waText = encodeURIComponent(
+    `*NOTIFICA B-SIDE* 🚀\n` +
+    `------------------\n` +
+    `📍 *Modello:* ${id}\n` +
+    `👤 *User:* ${currentUserName}\n` +
+    `📧 *Email:* ${currentUserEmail}\n` +
+    `🛠️ *Macchina:* ${document.getElementById('m_mac').value}\n` +
+    `📝 *Note:* ${document.getElementById('m_not').value || '-'}`
+);
+
+// 直接在当前窗口或新窗口打开 WhatsApp 预填内容
+window.open(`https://wa.me/${myPhone}?text=${waText}`);
+// --- WhatsApp 极简通知结束 ---
+
         mEditMode = null;
         setModInputsReadOnly(true);
         resetModButtons();
