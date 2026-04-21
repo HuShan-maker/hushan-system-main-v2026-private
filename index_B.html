@@ -708,7 +708,6 @@
         `${changesText}\n` + // 这里现在只会包含修改项或新建提示
         `--------------------------\n` +
         `📝 *Note:* ${newData.note || '-'}`;
-        );
         window.location.href = `https://wa.me/${myPhone}?text=${waText}`;
         mEditMode = null;
         setModInputsReadOnly(true);
