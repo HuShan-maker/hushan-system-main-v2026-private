@@ -637,51 +637,83 @@
         }
     }
 
-   async function saveModello(id, type) {
+async function saveModello(id, type) {
     const message = (type === 'crea') ? "Vuoi creare?" : "Confermi aggiornamento?";
     if (!confirm(message)) return;
 
-    // 1. 先抓取数据，防止后面报错
-    const macVal = document.getElementById('m_mac').value.trim();
-    const noteVal = document.getElementById('m_not').value.trim();
-    
-    // 2. 组装数据对象
+    // 1. 抓取当前输入的数据
     const newData = {
-        macchina: macVal,
-        posaggio: document.getElementById('m_pos') ? document.getElementById('m_pos').value.trim() : "",
-        lama: document.getElementById('m_lam') ? document.getElementById('m_lam').value.trim() : "",
-        panto: document.getElementById('m_pan') ? document.getElementById('m_pan').value.trim() : "",
-        scarico: document.getElementById('m_sca') ? document.getElementById('m_sca').value.trim() : "",
-        quota: document.getElementById('m_quo') ? document.getElementById('m_quo').value.trim() : "",
-        note: noteVal,
+        macchina: document.getElementById('m_mac').value.trim(),
+        posaggio: document.getElementById('m_pos').value.trim(),
+        lama: document.getElementById('m_lam').value.trim(),
+        panto: document.getElementById('m_pan').value.trim(),
+        scarico: document.getElementById('m_sca').value.trim(),
+        quota: document.getElementById('m_quo').value.trim(),
+        note: document.getElementById('m_not').value.trim(),
         at: Date.now(), 
-        by: currentUserName
+        by: currentUserName,
+        email: typeof currentUserEmail !== 'undefined' ? currentUserEmail : "EMAIL"
     };
 
-    // 3. 构建 WhatsApp 链接 (放在最前面测试跳转)
-    const myPhone = "393662613686"; 
-    const waText = encodeURIComponent(`*B-SIDE UPDATE*\nModello: ${id}\nUser: ${currentUserName}\nMac: ${macVal}`);
-    const waUrl = `https://wa.me/${myPhone}?text=${waText}`;
+    // 2. 计算对比差异 (找出哪些地方变了)
+    let changesText = "";
+    if (type === 'aggiorna' && typeof currentModData !== 'undefined' && currentModData) {
+        const keys = ["macchina", "posaggio", "lama", "panto", "scarico", "quota", "note"];
+        keys.forEach(k => {
+            const oldVal = currentModData[k] ? String(currentModData[k]).trim() : "-";
+            const newVal = newData[k] ? String(newData[k]).trim() : "-";
+            if (newVal !== oldVal) {
+                // 转换一下 key 的名字，让 WhatsApp 看起来更专业
+                let label = k.toUpperCase();
+                changesText += `\n- ${label}: _${oldVal}_ ➔ *${newVal}*`;
+            }
+        });
+    }
+
+    if (changesText === "") {
+        changesText = (type === 'crea') ? "\n✨ *Nuovo Modello Creato!*" : "\n✅ *Nessun parametro modificato.*";
+    }
+
+    // 3. 准备所有字段的完整摘要 (nSum)
+    const nSum = `${newData.macchina} / ${newData.posaggio} / ${newData.lama} / ${newData.panto}° / ${newData.scarico}° / ${newData.quota}`;
 
     try {
-        // 4. 执行 Firebase 写入
-        console.log("Salvataggio in corso...");
+        // 4. 执行 Firebase 写入 (当前数据 + 历史记录)
         await db.ref(`modelli_db/${id}/current`).set(newData);
-        
-        // 5. 写入成功后，强制跳转
+        await db.ref(`modelli_db/${id}/history`).push({ 
+            type: type, 
+            newSummary: nSum, 
+            by: currentUserName, 
+            at: Date.now() 
+        });
+
+        // 5. 构建 WhatsApp 信息内容 (全信息版)
+        const myPhone = "393662613686"; 
+        const waMessage = 
+            `🚀 *B-SIDE UPDATE* 🚀\n` +
+            `--------------------------\n` +
+            `📍 *Modello:* ${id}\n` +
+            `👤 *User:* ${currentUserName}\n` +
+            `--------------------------\n` +
+            `📦 *DETTAGLI:* ${nSum}\n` +
+            `--------------------------` +
+            `${changesText}\n` +
+            `--------------------------\n` +
+            `📝 *Note:* ${newData.note || '-'}`;
+
+        const waUrl = `https://wa.me/${myPhone}?text=${encodeURIComponent(waMessage)}`;
+
+        // 6. 执行跳转
         window.location.href = waUrl;
 
-        // --- 收尾工作 (如果页面还没跳转走的话) ---
+        // 7. 收尾 UI
         mEditMode = null;
         setModInputsReadOnly(true);
         resetModButtons();
         handleModelloSearch(id);
 
     } catch (e) {
-        // 如果这里报错，说明是 Firebase 权限或网络问题
         alert("Errore Firebase: " + e.message);
-        // 即使数据库存失败了，我们也强行跳 WhatsApp 看看链接对不对
-        window.location.href = waUrl;
     }
 }
 
