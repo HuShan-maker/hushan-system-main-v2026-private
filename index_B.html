@@ -706,14 +706,19 @@
         `👤 *User:* ${currentUserName}\n` +
         `--------------------------` +
         `${changesText}\n` + // 这里现在只会包含修改项或新建提示
-        `--------------------------\n` +
+        `--------------------------\
         `📝 *Note:* ${newData.note || '-'}`;
-        window.location.href = `https://wa.me/${myPhone}?text=${waText}`;
-        mEditMode = null;
-        setModInputsReadOnly(true);
-        resetModButtons();
-        handleModelloSearch(id);
-    }
+
+    // 注意这里：直接拼接 URL 并跳转，不要有多余的 );
+    const waUrl = `https://wa.me/${myPhone}?text=${encodeURIComponent(waMessage)}`;
+    window.location.href = waUrl;
+
+    // 收尾逻辑
+    mEditMode = null;
+    setModInputsReadOnly(true);
+    resetModButtons();
+    handleModelloSearch(id);
+}
 
     function resetModForm(full = true) {
         if(full) document.getElementById('mSearchInput').value = "";
