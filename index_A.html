@@ -238,13 +238,13 @@
     };
 
     function handleFeedbackOpen() {
-        const now = new Date();
-        const currentTime = now.getHours() + (now.getMinutes() / 60);
-        if ((currentTime >= 12 && currentTime <= 14.25) || (currentTime >= 20 && currentTime <= 22.25)) {
+        //const now = new Date();
+        //const currentTime = now.getHours() + (now.getMinutes() / 60);
+        //if ((currentTime >= 12 && currentTime <= 14.25) || (currentTime >= 20 && currentTime <= 22.25)) {
             document.getElementById('fModal').style.display = 'flex';
-        } else {
-            alert("FUNZIONE NON ATTIVA.\n\nIl feedback è disponibile negli orari:\n- 12:00 - 14:15\n- 20:00 - 22:15");
-        }
+        //} else {
+            //alert("FUNZIONE NON ATTIVA.\n\nIl feedback è disponibile negli orari:\n- 12:00 - 14:15\n- 20:00 - 22:15");
+        //}
     }
 
     function submitFeedback() {
