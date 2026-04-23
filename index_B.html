@@ -676,7 +676,7 @@
     // --- WhatsApp 动态内容逻辑 ---
     let waBody = "";
     if (type === 'aggiorna') {
-        waBody = `🔄 *MODIFICHE:*`;
+        waBody = `- *MODIFICHE:*`;
         let hasChanged = false;
         const keys = ["macchina", "posaggio", "lama", "panto", "scarico", "quota"];
         keys.forEach(k => {
@@ -690,7 +690,7 @@
         if (!hasChanged) waBody = `\n✅ *Nessuna modifica ai parametri.*`;
     } else {
         // --- 如果是新建 (Crea)，显示所有填写的最新信息 ---
-        waBody = `✨ *NUOVO MODELLO CREATO* ✨\n` +
+        waBody = `- *NUOVO MODELLO CREATO* -\n` +
                  `• MAC: *${newData.macchina}*\n` +
                  `• POS: *${newData.posaggio}*\n` +
                  `• LAM: *${newData.lama}*\n` +
@@ -701,14 +701,14 @@
 
     const myPhone = "393662613686"; 
     const waMessage = 
-        `💻 *DB-MODELLI UPDATE* ⚙️\n` + 
+        `--- *DB-MODELLI UPDATE* ---\n` + 
         `--------------------------\n` +
-        `📍 *Modello:* ${id}\n` +
-        `👤 *User:* ${currentUserName}\n` +
+        `- *Modello:* ${id}\n` +
+        `- *User:* ${currentUserName}\n` +
         `--------------------------\n` +
         `${waBody}\n` + 
         `--------------------------\n` +
-        `📝 *Note:* ${newData.note || '-'}`;
+        `- *Note:* ${newData.note || '-'}`;
 
     const waUrl = `https://wa.me/${myPhone}?text=${encodeURIComponent(waMessage)}`;
     window.location.href = waUrl;
